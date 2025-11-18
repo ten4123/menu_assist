@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>메뉴 아이콘 제안</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; height: 100vh; overflow-y: auto; }
+    </style>
+</head>
+<body class="p-6 bg-gray-50 flex flex-col h-full">
+    <header class="mb-6">
+        <h1 class="text-xl font-bold text-gray-800">✨ 아이콘 매핑 제안</h1>
+        <p class="text-sm text-gray-500">로컬 매핑 DB를 기반으로 메뉴명에 맞는 에셋을 추천합니다.</p>
+    </header>
+
+    <div class="space-y-4">
+        <div>
+            <label for="menuName" class="block text-sm font-medium text-gray-700 mb-1">메뉴명 입력 (예: 재고물품관리, 퇴원환자별통계)</label>
+            <input type="text" id="menuName" value="재고물품관리"
+                   class="w-full px-4 py-2 border border-gray-300 rounded-lg shadow-sm focus:ring-indigo-500 focus:border-indigo-500 transition duration-150"
+                   placeholder="메뉴명을 입력하세요">
+        </div>
+
+        <button id="suggestButton"
+                class="w-full flex justify-center py-2 px-4 border border-transparent rounded-lg shadow-md text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition duration-150 ease-in-out disabled:opacity-50">
+            아이콘 제안 받기
+        </button>
+    </div>
+
+    <div id="loadingIndicator" class="mt-6 hidden text-center">
+        <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600 mx-auto"></div>
+        <p class="mt-2 text-indigo-600 text-sm">로컬 매핑 중...</p>
+    </div>
+
+    <div id="resultsArea" class="mt-6 p-4 bg-white border border-gray-200 rounded-lg shadow-inner flex-grow overflow-y-auto">
+        <h3 class="text-lg font-semibold text-gray-800 mb-3">결과 요약</h3>
+        <div id="keywordFeedback" class="text-sm text-gray-700 space-y-2 mb-4"></div>
+        <h4 class="text-sm font-semibold text-gray-600">Raw JSON</h4>
+        <pre id="resultsPre" class="mt-1 text-sm text-gray-600 whitespace-pre-wrap font-mono"></pre>
+    </div>
+
+    <script>
+        const suggestButton = document.getElementById('suggestButton');
+        const keywordFeedback = document.getElementById('keywordFeedback');
+        const menuNameInput = document.getElementById('menuName');
+
+        function triggerSuggest() {
+            const menuName = menuNameInput.value;
+            const loading = document.getElementById('loadingIndicator');
+            const resultsPre = document.getElementById('resultsPre');
+
+            if (!menuName) return;
+
+            suggestButton.disabled = true;
+            loading.classList.remove('hidden');
+            resultsPre.textContent = '분석 요청 중...';
+            resultsPre.classList.remove('text-red-500');
+            keywordFeedback.innerHTML = '';
+
+            // 1. Figma Plugin (code.ts)으로 메뉴명 전송
+            parent.postMessage({ pluginMessage: { type: 'suggest-icons', menuName } }, '*');
+        }
+
+        suggestButton.onclick = triggerSuggest;
+
+        // 엔터 키 이벤트 처리
+        menuNameInput.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' && !suggestButton.disabled) {
+                event.preventDefault();
+                triggerSuggest();
+            }
+        });
+
+        // 4. Figma Plugin (code.ts)에서 결과 수신
+        function renderKeywordFeedback(result) {
+            const { input_keywords = [], match_details = [], asset_combinations = [] } = result;
+
+            const inputSummary = input_keywords.length
+                ? `<div><span class="font-semibold text-gray-800">입력 키워드:</span> ${input_keywords.join(", ")}</div>`
+                : `<div class="text-gray-500">입력과 직접 일치하는 키워드를 찾지 못했습니다.</div>`;
+
+            const detailSummary = match_details.length
+                ? `<ul class="list-disc list-inside space-y-1">
+                        ${match_details.map((detail) => {
+                            const labelMap = {
+                                exact: "직접 일치",
+                                concept: "개념 매칭",
+                                synonym: "유사어 매핑"
+                            };
+                            const inputToken = detail.inputToken ?? "직접 일치 없음";
+                            return `<li><span class="font-mono text-indigo-600">${inputToken}</span> → <span class="font-semibold">${detail.matchedKeyword}</span> <span class="text-xs text-gray-500">(${labelMap[detail.matchType]} · 유사도 ${detail.similarity})</span></li>`;
+                        }).join("")}
+                   </ul>`
+                : `<div class="text-gray-500">매칭된 키워드가 없습니다. 기본 아이콘을 사용합니다.</div>`;
+
+            const combinationSummary = asset_combinations.length
+                ? `<div class="pt-4"><span class="font-semibold text-gray-800">조합 제안 (${asset_combinations.length}개)</span>
+                        <ol class="list-decimal list-inside space-y-1 text-indigo-600 text-sm">
+                            ${asset_combinations.map((combo, index) => `<li>Option ${index + 1}: ${combo.join(" + ")}</li>`).join("")}
+                        </ol>
+                   </div>`
+                : `<div class="pt-4 text-gray-500">생성된 조합이 없습니다.</div>`;
+
+            keywordFeedback.innerHTML = `${inputSummary}<div class="pt-2">${detailSummary}</div>${combinationSummary}`;
+        }
+
+        onmessage = (event) => {
+            const data = event.data.pluginMessage;
+            const loading = document.getElementById('loadingIndicator');
+            const resultsPre = document.getElementById('resultsPre');
+
+            suggestButton.disabled = false;
+            loading.classList.add('hidden');
+
+            if (data.type === 'suggestions-result') {
+                renderKeywordFeedback(data.result);
+                resultsPre.textContent = JSON.stringify(data.result, null, 2);
+                resultsPre.classList.remove('text-red-500');
+            } else if (data.type === 'suggestions-error') {
+                resultsPre.textContent = `오류 발생: ${data.message}`;
+                resultsPre.classList.add('text-red-500');
+                keywordFeedback.innerHTML = '';
+            }
+        };
+    </script>
+</body>
+</html>
