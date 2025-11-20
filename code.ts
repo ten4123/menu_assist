@@ -12,7 +12,7 @@ const DB_DATA_STRING = `
     {
         "keyword": "관리",
         "concept": "운영, 제어, 설정, 시스템",
-        "assets": ["Manage/invisible", "Manage/badge", "Manage/bg", "Manage/center"]
+        "assets": ["Manage/invisible", "Manage/badge", "Manage/bg", "Manage/metaphor"]
     },
     {
         "keyword": "분석",
@@ -96,29 +96,50 @@ const ICON_DB: IconMappingRow[] = JSON.parse(
 const SPECIAL_CHART_ASSETS = ["Icon/Data/Chart_Pie", "Icon/Data/Chart_Bar"];
 const SPECIAL_ALERT_ASSET = "Icon/Alert/Warning_Badge";
 const DEFAULT_ICON_SIZE = 320;
+const NODE_ID_MAP: Record<string, string> = {
+  "Manage/invisible": "1:9",
+  "Manage/bg": "1:7",
+  "Manage/badge": "1:8",
+  "Manage/metaphor": "1:10",
+  "Setting/bg": "48:102",
+};
+
 const ASSET_LAYER_PRIORITY: Record<string, number> = {
   "Manage/invisible": 5,
   "Manage/badge": 5,
   "Manage/bg": 0,
-  "Manage/center": 1,
+  "Manage/metaphor": 1,
   "Setting/bg": 0,
 };
 
-const localComponentCache = new Map<string, ComponentNode | null>();
+const componentCache = new Map<string, ComponentNode | null>();
 
-function findLocalComponent(componentName: string): ComponentNode | null {
-  if (localComponentCache.has(componentName)) {
-    return localComponentCache.get(componentName) ?? null;
+function getComponentNode(assetName: string): ComponentNode | null {
+  if (componentCache.has(assetName)) {
+    return componentCache.get(assetName) ?? null;
   }
-  const component = figma.currentPage.findOne(
-    (node) => node.type === "COMPONENT" && node.name.includes(componentName)
-  ) as ComponentNode | null;
-  localComponentCache.set(componentName, component ?? null);
+
+  let component: ComponentNode | null = null;
+  const nodeId = NODE_ID_MAP[assetName];
+  if (nodeId) {
+    const found = figma.getNodeById(nodeId);
+    if (found && found.type === "COMPONENT") {
+      component = found as ComponentNode;
+    }
+  }
+
+  if (!component) {
+    component = figma.currentPage.findOne(
+      (node) => node.type === "COMPONENT" && node.name.includes(assetName)
+    ) as ComponentNode | null;
+  }
+
+  componentCache.set(assetName, component ?? null);
   return component;
 }
 
 function isAssetAvailable(assetName: string): boolean {
-  return Boolean(assetName && findLocalComponent(assetName));
+  return Boolean(assetName && getComponentNode(assetName));
 }
 
 // -----------------------------------------------------------
@@ -213,6 +234,12 @@ function findMatchCandidates(menuName: string): MatchCandidate[] {
     for (const token of conceptTokens) {
       const tokenNormalized = normalizeMenuName(token);
       if (!tokenNormalized) continue;
+
+      // When the input exactly matches another keyword (e.g., "설정"),
+      // avoid treating a concept token of a different keyword (e.g., 관리의 "설정") as a match.
+      if (normalized === tokenNormalized && keywordNormalized !== normalized) {
+        continue;
+      }
 
       if (normalized.includes(tokenNormalized)) {
         const conceptScore = 0.9;
@@ -396,18 +423,14 @@ async function createFallbackFrame(componentName: string): Promise<FrameNode> {
 }
 
 async function createIconInstance(componentName: string): Promise<SceneNode> {
-  const localComponent = findLocalComponent(componentName);
+  const componentNode = getComponentNode(componentName);
 
-  if (localComponent) {
-    const instance = localComponent.createInstance();
+  if (componentNode) {
+    const instance = componentNode.createInstance();
     instance.name = componentName;
     return instance;
   }
 
-  console.error(`'${componentName}' 컴포넌트를 페이지에서 찾지 못했습니다.`);
-  figma.notify(`'${componentName}' 컴포넌트를 페이지에서 찾지 못했습니다.`, {
-    timeout: 4000,
-  });
   return createFallbackFrame(componentName);
 }
 
