@@ -12,22 +12,22 @@ const DB_DATA_STRING = `
     {
         "keyword": "관리",
         "concept": "운영, 제어, 설정, 시스템",
-        "assets": ["Manage/invisible", "Manage/badge", "Manage/bg", "Manage/metaphor"]
-    },
-    {
-        "keyword": "분석",
-        "concept": "검색, 찾기, 데이터 보기, 열람",
-        "assets": [ "Icon/Action/Magnify_Glass", "Icon/Action/View_List"]
-    },
-    {
-        "keyword": "환자",
-        "concept": "사람, 의료 대상, 프로필, 침대",
-        "assets": ["Icon/People/Patient_Profile", "Icon/Medical/Bed_A", "Icon/People/User_A"]
+        "assets": ["Manage/invisible", "Manage/badge_1", "Manage/bg", "Manage/metaphor"]
     },
     {
         "keyword": "설정",
         "concept": "분석, 결과, 테스트, 현미경",
         "assets": ["Setting/bg", "Icon/Action/Test_Tube", "Icon/Action/Check_Circle"]
+    },    
+    {
+        "keyword": "조회",
+        "concept": "검색, 찾기, 데이터 보기, 열람",
+        "assets": [ "Search/badge_1", "Icon/Action/View_List"]
+    },
+    {
+        "keyword": "환자",
+        "concept": "사람, 의료 대상, 프로필, 침대",
+        "assets": ["Icon/People/Patient_Profile", "Icon/Medical/Bed_A", "Icon/People/User_A"]
     },
     {
         "keyword": "등록",
@@ -96,50 +96,53 @@ const ICON_DB: IconMappingRow[] = JSON.parse(
 const SPECIAL_CHART_ASSETS = ["Icon/Data/Chart_Pie", "Icon/Data/Chart_Bar"];
 const SPECIAL_ALERT_ASSET = "Icon/Alert/Warning_Badge";
 const DEFAULT_ICON_SIZE = 320;
-const MENU_ICON_Component_NAME = "MenuIconAsset";
-const NODE_ID: Record<
-  string,
-  {
-    key: string;
-    Component: string;
-  }
-> = {
-  "Manage/invisible": {
-    key: "1:9",
-    Component: MENU_ICON_Component_NAME,
-  },
-  "Manage/bg": {
-    key: "1:7",
-    Component: MENU_ICON_Component_NAME,
-  },
-  "Manage/badge": {
-    key: "1:8",
-    Component: MENU_ICON_Component_NAME,
-  },
-  "Manage/metaphor": {
-    key: "1:10",
-    Component: MENU_ICON_Component_NAME,
-  },
-  "Setting/bg": {
-    key: "48:102",
-    Component: MENU_ICON_Component_NAME,
-  },
-  "EMR/bg": {
-    key: "108:40",
-    Component: MENU_ICON_Component_NAME,
-  },
+const NODE_ID_MAP: Record<string, string> = {
+  "Manage/invisible": "1:9",
+  "Manage/bg": "1:7",
+  "Manage/badge_1": "1:8",
+  "Manage/metaphor": "1:10",
+  "Setting/bg": "48:102",
+  "Search/badge_1": "105:783",
+  "EMR/bg": "108:40",
+}; // NOTE: 라이브러리 import를 걷어내고 로컬 노드 ID만 사용합니다.
+
+const FEATURE_LAYER_PRIORITY: Record<string, number> = {
+  invisible: 6,
+  badge_1: 5,
+  bg: 0,
+  metaphor: 1,
 };
 
-const ASSET_LAYER_PRIORITY: Record<string, number> = {
-  "Manage/invisible": 5,
-  "Manage/badge": 5,
-  "Manage/bg": 0,
-  "Manage/metaphor": 1,
-  "Setting/bg": 0,
-};
+const componentCache = new Map<string, ComponentNode | null>();
+
+function getComponentNode(assetName: string): ComponentNode | null {
+  if (componentCache.has(assetName)) {
+    return componentCache.get(assetName) ?? null;
+  }
+
+  let component: ComponentNode | null = null;
+
+  // NOTE: documentAccess가 dynamic-page라 getNodeById*를 사용할 수 없어
+  // 현재 페이지에서 이름으로만 컴포넌트를 찾습니다.
+  component = figma.currentPage.findOne(
+    (node) => node.type === "COMPONENT" && node.name.includes(assetName)
+  ) as ComponentNode | null;
+
+  if (!component) {
+    const featureName = assetName.split("/").pop();
+    if (featureName) {
+      component = figma.currentPage.findOne(
+        (node) => node.type === "COMPONENT" && node.name.includes(featureName)
+      ) as ComponentNode | null;
+    }
+  }
+
+  componentCache.set(assetName, component ?? null);
+  return component;
+}
 
 function isAssetAvailable(assetName: string): boolean {
-  return Boolean(NODE_ID[assetName]);
+  return Boolean(assetName && getComponentNode(assetName));
 }
 
 // -----------------------------------------------------------
@@ -303,7 +306,9 @@ function appendSpecialRuleAssets(menuName: string, assets: string[]): string[] {
 }
 
 function getAssetZIndex(assetName: string): number {
-  return ASSET_LAYER_PRIORITY[assetName] ?? 0;
+  const parts = assetName.split("/");
+  const feature = parts.length > 1 ? parts[1] : parts[0];
+  return FEATURE_LAYER_PRIORITY[feature] ?? 0;
 }
 
 function getKeywordPosition(menuName: string, keyword: string): number {
@@ -423,30 +428,10 @@ async function createFallbackFrame(componentName: string): Promise<FrameNode> {
 }
 
 async function createIconInstance(componentName: string): Promise<SceneNode> {
-  const meta = NODE_ID[componentName];
+  const componentNode = getComponentNode(componentName);
 
-  if (meta?.key) {
-    try {
-      const ComponentComponent = await figma.importComponentByKeyAsync(
-        meta.key
-      );
-      const instance = ComponentComponent.createInstance();
-      instance.name = componentName;
-      return instance;
-    } catch (error) {
-      console.error(
-        `라이브러리 '${meta.Component}'에서 '${componentName}' 가져오기 실패`,
-        error
-      );
-    }
-  }
-
-  const localComponent = figma.currentPage.findOne(
-    (node) => node.type === "COMPONENT" && node.name.includes(componentName)
-  ) as ComponentNode | null;
-
-  if (localComponent) {
-    const instance = localComponent.createInstance();
+  if (componentNode) {
+    const instance = componentNode.createInstance();
     instance.name = componentName;
     return instance;
   }
