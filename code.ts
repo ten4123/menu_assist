@@ -35,9 +35,9 @@ const DB_DATA_STRING = `
         "assets": ["Icon/Action/Add_A", "Icon/Action/Sign_Up", "Icon/Document/File_Add"]
     },
     {
-        "keyword": "재고",
-        "concept": "물품, 박스, 창고, 수량",
-        "assets": ["Icon/Material/Box_A", "Icon/Material/Warehouse", "Icon/Action/Inventory"]
+        "keyword": "의무기록",
+        "concept": "emr, mr, medical record",
+        "assets": ["EMR/bg", "Icon/Material/Warehouse", "Icon/Action/Inventory"]
     },
     {
         "keyword": "물품",
@@ -96,12 +96,38 @@ const ICON_DB: IconMappingRow[] = JSON.parse(
 const SPECIAL_CHART_ASSETS = ["Icon/Data/Chart_Pie", "Icon/Data/Chart_Bar"];
 const SPECIAL_ALERT_ASSET = "Icon/Alert/Warning_Badge";
 const DEFAULT_ICON_SIZE = 320;
-const NODE_ID_MAP: Record<string, string> = {
-  "Manage/invisible": "1:9",
-  "Manage/bg": "1:7",
-  "Manage/badge": "1:8",
-  "Manage/metaphor": "1:10",
-  "Setting/bg": "48:102",
+const MENU_ICON_Component_NAME = "MenuIconAsset";
+const NODE_ID: Record<
+  string,
+  {
+    key: string;
+    Component: string;
+  }
+> = {
+  "Manage/invisible": {
+    key: "1:9",
+    Component: MENU_ICON_Component_NAME,
+  },
+  "Manage/bg": {
+    key: "1:7",
+    Component: MENU_ICON_Component_NAME,
+  },
+  "Manage/badge": {
+    key: "1:8",
+    Component: MENU_ICON_Component_NAME,
+  },
+  "Manage/metaphor": {
+    key: "1:10",
+    Component: MENU_ICON_Component_NAME,
+  },
+  "Setting/bg": {
+    key: "48:102",
+    Component: MENU_ICON_Component_NAME,
+  },
+  "EMR/bg": {
+    key: "108:40",
+    Component: MENU_ICON_Component_NAME,
+  },
 };
 
 const ASSET_LAYER_PRIORITY: Record<string, number> = {
@@ -112,34 +138,8 @@ const ASSET_LAYER_PRIORITY: Record<string, number> = {
   "Setting/bg": 0,
 };
 
-const componentCache = new Map<string, ComponentNode | null>();
-
-function getComponentNode(assetName: string): ComponentNode | null {
-  if (componentCache.has(assetName)) {
-    return componentCache.get(assetName) ?? null;
-  }
-
-  let component: ComponentNode | null = null;
-  const nodeId = NODE_ID_MAP[assetName];
-  if (nodeId) {
-    const found = figma.getNodeById(nodeId);
-    if (found && found.type === "COMPONENT") {
-      component = found as ComponentNode;
-    }
-  }
-
-  if (!component) {
-    component = figma.currentPage.findOne(
-      (node) => node.type === "COMPONENT" && node.name.includes(assetName)
-    ) as ComponentNode | null;
-  }
-
-  componentCache.set(assetName, component ?? null);
-  return component;
-}
-
 function isAssetAvailable(assetName: string): boolean {
-  return Boolean(assetName && getComponentNode(assetName));
+  return Boolean(NODE_ID[assetName]);
 }
 
 // -----------------------------------------------------------
@@ -423,10 +423,30 @@ async function createFallbackFrame(componentName: string): Promise<FrameNode> {
 }
 
 async function createIconInstance(componentName: string): Promise<SceneNode> {
-  const componentNode = getComponentNode(componentName);
+  const meta = NODE_ID[componentName];
 
-  if (componentNode) {
-    const instance = componentNode.createInstance();
+  if (meta?.key) {
+    try {
+      const ComponentComponent = await figma.importComponentByKeyAsync(
+        meta.key
+      );
+      const instance = ComponentComponent.createInstance();
+      instance.name = componentName;
+      return instance;
+    } catch (error) {
+      console.error(
+        `라이브러리 '${meta.Component}'에서 '${componentName}' 가져오기 실패`,
+        error
+      );
+    }
+  }
+
+  const localComponent = figma.currentPage.findOne(
+    (node) => node.type === "COMPONENT" && node.name.includes(componentName)
+  ) as ComponentNode | null;
+
+  if (localComponent) {
+    const instance = localComponent.createInstance();
     instance.name = componentName;
     return instance;
   }
