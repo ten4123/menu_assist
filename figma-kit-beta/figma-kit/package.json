@@ -1,0 +1,79 @@
+{
+  "name": "figma-kit",
+  "description": "A set of React components for building Figma plugins.",
+  "homepage": "https://figma-kit.dev",
+  "version": "0.0.0-semantic-release",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/tigranpetrossian/figma-kit"
+  },
+  "keywords": [
+    "react",
+    "figma",
+    "figma react components",
+    "figma design system",
+    "UI3",
+    "component-library"
+  ],
+  "type": "module",
+  "files": [
+    "dist",
+    "*.css"
+  ],
+  "exports": {
+    "./styles.css": "./dist/styles.css",
+    "./figma-development-theme.css": "./dist/figma-development-theme.css",
+    ".": {
+      "require": "./dist/index.cjs",
+      "import": "./dist/index.mjs",
+      "types": "./dist/index.d.ts"
+    },
+    "./tailwind.preset.js": {
+      "require": "./dist/tailwind.preset.js"
+    },
+    "./*": "./*"
+  },
+  "main": "dist/index.cjs",
+  "module": "dist/index.mjs",
+  "typings": "dist/index.d.ts",
+  "sideEffects": false,
+  "scripts": {
+    "dev": "vite build --mode development --watch",
+    "build": "pnpm build:js && pnpm build:css && pnpm build:figma-dev-theme-css && pnpm build:tailwind-preset",
+    "build:js": "vite build",
+    "build:css": "postcss src/styles/index.css -o dist/styles.css",
+    "build:figma-dev-theme-css": "postcss src/styles/figma-development-theme.css -o dist/figma-development-theme.css",
+    "build:tailwind-preset": "cp src/tailwind/preset.js dist/tailwind.preset.js",
+    "test": "vitest"
+  },
+  "peerDependencies": {
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0"
+  },
+  "dependencies": {
+    "@emmetio/math-expression": "^1.0.5",
+    "@radix-ui/react-alert-dialog": "^1.1.1",
+    "@radix-ui/react-collapsible": "^1.1.0",
+    "@radix-ui/react-context-menu": "^2.1.5",
+    "@radix-ui/react-dialog": "^1.1.1",
+    "@radix-ui/react-dropdown-menu": "^2.0.6",
+    "@radix-ui/react-popover": "^1.1.1",
+    "@radix-ui/react-radio-group": "^1.2.0",
+    "@radix-ui/react-select": "^2.0.0",
+    "@radix-ui/react-slider": "1.2.0",
+    "@radix-ui/react-slot": "^1.1.0",
+    "@radix-ui/react-switch": "^1.0.3",
+    "@radix-ui/react-tabs": "^1.1.0",
+    "@radix-ui/react-toggle-group": "^1.1.0",
+    "@radix-ui/react-tooltip": "^1.0.7",
+    "class-variance-authority": "^0.7.0",
+    "merge-props": "^6.0.0",
+    "react-textarea-autosize": "^8.5.3",
+    "remeda": "^2.0.5"
+  },
+  "devDependencies": {
+    "@types/react": "^18.2.66",
+    "@types/react-dom": "^18.2.22"
+  }
+}

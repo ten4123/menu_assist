@@ -1,0 +1,31 @@
+.fp-CollapsibleRoot {
+  :where(.fp-CollapsibleContent &) {
+    margin-left: calc(-1 * var(--space-1));
+  }
+}
+
+.fp-CollapsibleTrigger {
+  all: unset;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  padding: var(--space-2) 0;
+  font-family: var(--font-family-default);
+  font-size: var(--font-size-default);
+  font-weight: var(--font-weight-default);
+  letter-spacing: var(--letter-spacing-default);
+  line-height: var(--line-height-default);
+  color: var(--figma-color-text-secondary);
+}
+
+.fp-CollapsibleIndicator {
+  --color-icon: var(--figma-color-icon-secondary);
+
+  [data-state='open'] > & {
+    transform: rotate(90deg);
+  }
+}
+
+.fp-CollapsibleContent {
+  margin-left: var(--space-4);
+}

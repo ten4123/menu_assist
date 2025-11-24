@@ -81,12 +81,22 @@ interface AssetGroup {
 
 type AssetCombination = string[];
 
+interface MissingKeywordSuggestion {
+  missing: string;
+  related_keywords: Array<{
+    keyword: string;
+    similarity: number;
+  }>;
+}
+
 interface SuggestionResult {
   keywords: string[];
   asset_ids: string[];
   asset_combinations: AssetCombination[];
   confidence_score: number;
   input_keywords: string[];
+  missing_keywords: string[];
+  missing_keyword_suggestions: MissingKeywordSuggestion[];
   match_details: MatchDetail[];
 }
 
@@ -164,6 +174,99 @@ function extractInputKeywords(menuName: string): string[] {
     }
   }
   return Array.from(keywords);
+}
+
+function identifyMissingKeywords(
+  menuName: string,
+  matchedKeywords: string[]
+): string[] {
+  const normalized = normalizeMenuName(menuName);
+  if (!normalized) return [];
+
+  let residual = normalized;
+  const sortedMatched = matchedKeywords
+    .map((keyword) => normalizeMenuName(keyword))
+    .filter(Boolean)
+    .sort((a, b) => b.length - a.length);
+
+  for (const keyword of sortedMatched) {
+    residual = residual.split(keyword).join(" ");
+  }
+
+  const tokens =
+    residual
+      .split(/[^가-힣a-zA-Z0-9]+/g)
+      .map((token) => token.trim())
+      .filter((token) => token.length >= 2) ?? [];
+
+  return Array.from(new Set(tokens));
+}
+
+function findRelatedKeywords(
+  token: string,
+  limit = 3
+): MissingKeywordSuggestion["related_keywords"] {
+  const normalizedToken = normalizeMenuName(token);
+  if (!normalizedToken) return [];
+
+  const scored: MissingKeywordSuggestion["related_keywords"] = [];
+
+  for (const row of ICON_DB) {
+    const keywordNormalized = normalizeMenuName(row.keyword);
+    let bestScore = 0;
+
+    if (keywordNormalized) {
+      if (
+        normalizedToken.includes(keywordNormalized) ||
+        keywordNormalized.includes(normalizedToken)
+      ) {
+        bestScore = Math.max(bestScore, 0.7);
+      }
+      bestScore = Math.max(
+        bestScore,
+        getSimilarityScore(normalizedToken, keywordNormalized)
+      );
+    }
+
+    for (const conceptToken of tokenizeConcept(row.concept)) {
+      const conceptNormalized = normalizeMenuName(conceptToken);
+      if (!conceptNormalized) continue;
+      if (
+        normalizedToken.includes(conceptNormalized) ||
+        conceptNormalized.includes(normalizedToken)
+      ) {
+        bestScore = Math.max(bestScore, 0.6);
+      }
+      bestScore = Math.max(
+        bestScore,
+        getSimilarityScore(normalizedToken, conceptNormalized)
+      );
+    }
+
+    if (bestScore >= 0.25) {
+      scored.push({
+        keyword: row.keyword,
+        similarity: Number(bestScore.toFixed(2)),
+      });
+    }
+  }
+
+  scored.sort(
+    (a, b) => b.similarity - a.similarity || a.keyword.localeCompare(b.keyword)
+  );
+
+  return scored.slice(0, limit);
+}
+
+function buildMissingKeywordSuggestions(
+  menuName: string,
+  matchedKeywords: string[]
+): MissingKeywordSuggestion[] {
+  const missing = identifyMissingKeywords(menuName, matchedKeywords);
+  return missing.map((token) => ({
+    missing: token,
+    related_keywords: findRelatedKeywords(token),
+  }));
 }
 
 function getBigrams(text: string): string[] {
@@ -445,6 +548,11 @@ function getLocalIconSuggestion(menuName: string): SuggestionResult {
   const keywords = matchedRows.map((row) => row.keyword);
   const matchDetails = candidates.map((candidate) => candidate.detail);
   const inputKeywords = extractInputKeywords(menuName);
+  const missingKeywordSuggestions = buildMissingKeywordSuggestions(
+    menuName,
+    keywords
+  );
+  const missingKeywords = missingKeywordSuggestions.map((item) => item.missing);
   const fallbackRow = ICON_DB.find((row) => row.keyword === "현황");
 
   const groups =
@@ -492,6 +600,8 @@ function getLocalIconSuggestion(menuName: string): SuggestionResult {
     asset_combinations: combinations,
     confidence_score: Number(confidence.toFixed(2)),
     input_keywords: inputKeywords,
+    missing_keywords: missingKeywords,
+    missing_keyword_suggestions: missingKeywordSuggestions,
     match_details: matchDetails,
   };
 }
