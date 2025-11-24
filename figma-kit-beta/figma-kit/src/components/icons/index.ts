@@ -1,9 +1,0 @@
-export { PlusIcon } from './plus';
-export { CloseIcon } from './close';
-export { ChevronLeftIcon } from './chevron-left';
-export { ChevronRightIcon } from './chevron-right';
-export { ChevronUpIcon } from './chevron-up';
-export { ChevronDownIcon } from './chevron-down';
-export { CheckmarkIcon } from './checkmark';
-export { CircleIcon } from './circle';
-export { StylesIcon } from './styles';

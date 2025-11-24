@@ -1,5 +1,5 @@
 // Figma Plugin Code (code.ts)
-// 로컬 JSON 데이터를 인라인으로 포함해 매핑 로직을 완전히 독립적으로 실행합니다.
+// 로컬 데이터/설정을 인라인으로 포함해 독립 실행합니다.
 
 // -----------------------------------------------------------
 // 1. 초기 설정 및 상수
@@ -114,7 +114,7 @@ const NODE_ID_MAP: Record<string, string> = {
   "Setting/bg": "48:102",
   "Search/badge_1": "105:783",
   "EMR/bg": "108:40",
-}; // NOTE: 라이브러리 import를 걷어내고 로컬 노드 ID만 사용합니다.
+};
 
 const FEATURE_LAYER_PRIORITY: Record<string, number> = {
   invisible: 6,
