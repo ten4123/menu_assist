@@ -1,9 +1,9 @@
 export const NODE_ID_MAP = {
-  "Manage/invisible": "1:9",
-  "Manage/bg": "1:7",
-  "Manage/badge_1": "1:8",
-  "Manage/metaphor": "1:10",
-  "Setting/bg": "48:102",
-  "Search/badge_1": "105:783",
-  "EMR/bg": "108:40",
+    "Manage/invisible": "1:9",
+    "Manage/bg": "1:7",
+    "Manage/badge_1": "1:8",
+    "Manage/metaphor": "1:10",
+    "Setting/bg": "48:102",
+    "Search/badge_1": "105:783",
+    "EMR/bg": "108:40",
 };

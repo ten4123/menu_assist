@@ -1,7 +1,5 @@
 // Figma Plugin Code (code.ts)
-// 로컬 데이터는 별도 모듈에서 import하여 관리합니다.
-import { ICON_DB as ICON_DB_DATA, IconMappingRow } from "./data/icon-db";
-import { NODE_ID_MAP as NODE_ID_MAP_DATA } from "./data/node-id-map";
+// 로컬 데이터/설정을 인라인으로 포함해 독립 실행합니다.
 
 // -----------------------------------------------------------
 // 1. 초기 설정 및 상수
@@ -9,7 +7,58 @@ import { NODE_ID_MAP as NODE_ID_MAP_DATA } from "./data/node-id-map";
 
 figma.showUI(__html__, { width: 360, height: 550, title: "아이콘 매핑 제안" });
 
+const DB_DATA_STRING = `
+[
+    {
+        "keyword": "관리",
+        "concept": "운영, 제어, 설정, 시스템",
+        "assets": ["Manage/invisible", "Manage/badge_1", "Manage/bg", "Manage/metaphor"]
+    },
+    {
+        "keyword": "설정",
+        "concept": "분석, 결과, 테스트, 현미경",
+        "assets": ["Setting/bg", "Icon/Action/Test_Tube", "Icon/Action/Check_Circle"]
+    },    
+    {
+        "keyword": "조회",
+        "concept": "검색, 찾기, 데이터 보기, 열람",
+        "assets": [ "Search/badge_1", "Icon/Action/View_List"]
+    },
+    {
+        "keyword": "환자",
+        "concept": "사람, 의료 대상, 프로필, 침대",
+        "assets": ["Icon/People/Patient_Profile", "Icon/Medical/Bed_A", "Icon/People/User_A"]
+    },
+    {
+        "keyword": "등록",
+        "concept": "추가, 기록, 생성, 사인",
+        "assets": ["Icon/Action/Add_A", "Icon/Action/Sign_Up", "Icon/Document/File_Add"]
+    },
+    {
+        "keyword": "의무기록",
+        "concept": "emr, mr, medical record",
+        "assets": ["EMR/bg", "Icon/Material/Warehouse", "Icon/Action/Inventory"]
+    },
+    {
+        "keyword": "물품",
+        "concept": "아이템, 재료, 도구, 쇼핑",
+        "assets": ["Icon/Material/Tool_Kit", "Icon/Material/Shopping_Bag", "Icon/Action/Item"]
+    },
+    {
+        "keyword": "현황",
+        "concept": "통계, 대시보드, 상태, 차트",
+        "assets": ["Icon/Data/Dashboard", "Icon/Data/Chart_Bar", "Icon/Data/Status"]
+    }
+]
+`;
+
 type MatchType = "exact" | "concept" | "synonym";
+
+interface IconMappingRow {
+  keyword: string;
+  concept: string;
+  assets: string[];
+}
 
 interface MatchDetail {
   inputToken: string | null;
@@ -51,11 +100,19 @@ interface SuggestionResult {
   match_details: MatchDetail[];
 }
 
-const ICON_DB: IconMappingRow[] = ICON_DB_DATA;
+const ICON_DB: IconMappingRow[] = JSON.parse(DB_DATA_STRING) as IconMappingRow[];
 const SPECIAL_CHART_ASSETS = ["Icon/Data/Chart_Pie", "Icon/Data/Chart_Bar"];
 const SPECIAL_ALERT_ASSET = "Icon/Alert/Warning_Badge";
 const DEFAULT_ICON_SIZE = 320;
-const NODE_ID_MAP: Record<string, string> = NODE_ID_MAP_DATA;
+const NODE_ID_MAP: Record<string, string> = {
+  "Manage/invisible": "1:9",
+  "Manage/bg": "1:7",
+  "Manage/badge_1": "1:8",
+  "Manage/metaphor": "1:10",
+  "Setting/bg": "48:102",
+  "Search/badge_1": "105:783",
+  "EMR/bg": "108:40",
+};
 
 const FEATURE_LAYER_PRIORITY: Record<string, number> = {
   invisible: 6,
