@@ -5,7 +5,7 @@
 // 1. 초기 설정 및 상수
 // -----------------------------------------------------------
 
-figma.showUI(__html__, { width: 360, height: 550, title: "아이콘 매핑 제안" });
+figma.showUI(__html__, { width: 360, height: 550, title: "아이콘 매핑 제안", themeColors: true });
 
 const DB_DATA_STRING = `
 [
@@ -104,15 +104,6 @@ const ICON_DB: IconMappingRow[] = JSON.parse(DB_DATA_STRING) as IconMappingRow[]
 const SPECIAL_CHART_ASSETS = ["Icon/Data/Chart_Pie", "Icon/Data/Chart_Bar"];
 const SPECIAL_ALERT_ASSET = "Icon/Alert/Warning_Badge";
 const DEFAULT_ICON_SIZE = 320;
-const NODE_ID_MAP: Record<string, string> = {
-  "Manage/invisible": "1:9",
-  "Manage/bg": "1:7",
-  "Manage/badge_1": "1:8",
-  "Manage/metaphor": "1:10",
-  "Setting/bg": "48:102",
-  "Search/badge_1": "105:783",
-  "EMR/bg": "108:40",
-};
 
 const FEATURE_LAYER_PRIORITY: Record<string, number> = {
   invisible: 6,

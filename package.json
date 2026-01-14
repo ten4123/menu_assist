@@ -46,7 +46,7 @@
     }
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
+
     "yarn": "^1.22.22"
   }
 }
