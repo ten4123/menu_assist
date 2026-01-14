@@ -5,6 +5,10 @@
     "strict": true,
     "typeRoots": ["./node_modules/@types", "./node_modules/@figma"],
     "moduleResolution": "node",
-    "resolveJsonModule": true
-  }
+    "resolveJsonModule": true,
+    "esModuleInterop": true,
+    "outDir": "./"
+  },
+  "include": ["**/*.ts"],
+  "exclude": ["node_modules"]
 }

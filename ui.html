@@ -1,385 +1,389 @@
 <!DOCTYPE html>
 <html lang="ko">
-<head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>메뉴 아이콘 제안</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --font-family-default: 'Inter', ui-sans-serif, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            --figma-color-bg: #0f0f0f;
-            --figma-color-bg-secondary: #1c1c1c;
-            --figma-color-bg-hover: #262626;
-            --figma-color-bg-pressed: #303030;
-            --figma-color-bg-brand: #18a0fb;
-            --figma-color-bg-brand-pressed: #0d8ad8;
-            --figma-color-border: #2e2e2e;
-            --figma-color-border-selected: #18a0fb;
-            --figma-color-border-selected-strong: #0d8ad8;
-            --figma-color-text: #f5f5f5;
-            --figma-color-text-secondary: #c4c4c4;
-            --figma-color-text-tertiary: #9a9a9a;
-            --figma-color-text-onbrand: #ffffff;
-            --figma-color-text-disabled: #6b6b6b;
-            --space-1: 4px;
-            --space-2: 8px;
-            --space-3: 12px;
-            --space-4: 16px;
-            --space-5: 20px;
-            --space-6: 24px;
-            --space-8: 32px;
-            --radius-small: 6px;
-            --radius-medium: 10px;
-            --line-height-default: 1.4;
-            --font-size-default: 13px;
-            --letter-spacing-default: 0;
-            --font-weight-default: 500;
-        }
+      :root {
+        --font-family-default: "Inter", ui-sans-serif, -apple-system,
+          BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial,
+          sans-serif;
+        --space-1: 4px;
+        --space-2: 8px;
+        --space-3: 12px;
+        --space-4: 16px;
+        --space-5: 20px;
+        --space-6: 24px;
+        --space-8: 32px;
+        --radius-small: 6px;
+        --radius-medium: 10px;
+        --line-height-default: 1.4;
+        --font-size-default: 13px;
+        --letter-spacing-default: 0;
+        --font-weight-default: 500;
+      }
 
-        * { box-sizing: border-box; }
-        body {
-            margin: 0;
-            font-family: var(--font-family-default);
-            background: var(--figma-color-bg);
-            color: var(--figma-color-text);
-            height: 100vh;
-            display: flex;
-            flex-direction: column;
-            padding: var(--space-4);
-            gap: var(--space-4);
-        }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: var(--font-family-default);
+        background: var(--figma-color-bg);
+        color: var(--figma-color-text);
+        height: 100vh;
+        display: flex;
+        flex-direction: column;
+        padding: var(--space-4);
+        gap: var(--space-4);
+      }
 
-        .fp-panel {
-            background: var(--figma-color-bg-secondary);
-            border: 1px solid var(--figma-color-border);
-            border-radius: var(--radius-medium);
-            padding: var(--space-4);
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-4);
-            box-shadow: 0 16px 40px rgba(0,0,0,0.35);
-        }
+      .fp-panel {
+        background: var(--figma-color-bg-secondary);
+        border: 1px solid var(--figma-color-border);
+        border-radius: var(--radius-medium);
+        padding: var(--space-4);
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-4);
+        box-shadow: 0 16px 40px rgba(0, 0, 0, 0.35);
+      }
 
-        .fp-section {
-            display: flex;
-            flex-direction: column;
-            gap: var(--space-2);
-        }
+      .fp-section {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
 
-        .fp-title {
-            font-size: 16px;
-            font-weight: 600;
-            margin: 0;
-            color: #fff;
-        }
+      .fp-title {
+        font-size: 16px;
+        font-weight: 600;
+        margin: 0;
+        color: var(--figma-color-text);
+      }
 
-        .fp-sub {
-            font-size: 12px;
-            color: var(--figma-color-text-secondary);
-            margin: 0;
-        }
+      .fp-sub {
+        font-size: 12px;
+        color: var(--figma-color-text-secondary);
+        margin: 0;
+      }
 
-        .fp-label {
-            font-size: 12px;
-            color: var(--figma-color-text-secondary);
-            font-weight: 600;
-        }
+      .fp-label {
+        font-size: 12px;
+        color: var(--figma-color-text-secondary);
+        font-weight: 600;
+      }
 
-        .fp-Input {
-            all: unset;
-            box-sizing: border-box;
-            width: 100%;
-            height: var(--space-6);
-            padding: var(--space-1) 0 var(--space-1) var(--space-2);
-            background-color: var(--figma-color-bg);
-            border-radius: var(--radius-medium);
-            font-family: var(--font-family-default);
-            font-size: var(--font-size-default);
-            font-weight: var(--font-weight-default);
-            letter-spacing: var(--letter-spacing-default);
-            line-height: var(--line-height-default);
-            color: var(--figma-color-text);
-            outline-width: 1px;
-            outline-style: solid;
-            outline-offset: -1px;
-            outline-color: var(--figma-color-border);
-        }
+      .fp-Input {
+        all: unset;
+        box-sizing: border-box;
+        width: 100%;
+        height: var(--space-6);
+        padding: var(--space-1) 0 var(--space-1) var(--space-2);
+        background-color: var(--figma-color-bg);
+        border-radius: var(--radius-medium);
+        font-family: var(--font-family-default);
+        font-size: var(--font-size-default);
+        font-weight: var(--font-weight-default);
+        letter-spacing: var(--letter-spacing-default);
+        line-height: var(--line-height-default);
+        color: var(--figma-color-text);
+        outline-width: 1px;
+        outline-style: solid;
+        outline-offset: -1px;
+        outline-color: var(--figma-color-border);
+      }
 
-        .fp-Input:hover {
-            outline-color: var(--figma-color-border-selected);
-        }
-        .fp-Input:focus {
-            outline-color: var(--figma-color-border-selected-strong);
-        }
-        .fp-Input::placeholder {
-            color: var(--figma-color-text-tertiary);
-        }
+      .fp-Input:hover {
+        outline-color: var(--figma-color-border-selected);
+      }
+      .fp-Input:focus {
+        outline-color: var(--figma-color-border-selected-strong);
+      }
+      .fp-Input::placeholder {
+        color: var(--figma-color-text-tertiary);
+      }
 
-        .fp-Button {
-            border: none;
-            cursor: pointer;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            padding: var(--space-2) var(--space-3);
-            border-radius: var(--radius-small);
-            font-family: var(--font-family-default);
-            font-size: 12px;
-            font-weight: 600;
-            line-height: 1.2;
-            background: var(--figma-color-bg-brand);
-            color: var(--figma-color-text-onbrand);
-            outline: 1px solid transparent;
-            transition: background 120ms ease, outline-color 120ms ease, opacity 120ms ease;
-        }
-        .fp-Button:hover { background: var(--figma-color-bg-brand-pressed); }
-        .fp-Button:active { background: var(--figma-color-bg-pressed); }
-        .fp-Button:focus-visible { outline-color: var(--figma-color-border-selected); }
-        .fp-Button:disabled { opacity: 0.4; cursor: not-allowed; }
+      .fp-Button {
+        border: none;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-2) var(--space-3);
+        border-radius: var(--radius-small);
+        font-family: var(--font-family-default);
+        font-size: 12px;
+        font-weight: 600;
+        line-height: 1.2;
+        background: var(--figma-color-bg-brand);
+        color: var(--figma-color-text-onbrand);
+        outline: 1px solid transparent;
+        transition: background 120ms ease, outline-color 120ms ease,
+          opacity 120ms ease;
+      }
+      .fp-Button:hover {
+        background: var(--figma-color-bg-brand-pressed);
+      }
+      .fp-Button:active {
+        background: var(--figma-color-bg-pressed);
+      }
+      .fp-Button:focus-visible {
+        outline-color: var(--figma-color-border-selected);
+      }
+      .fp-Button:disabled {
+        opacity: 0.4;
+        cursor: not-allowed;
+      }
 
-        .fp-Button.secondary {
-            background: transparent;
-            color: var(--figma-color-text);
-            outline-color: var(--figma-color-border);
-        }
-        .fp-Button.secondary:hover { background: var(--figma-color-bg-hover); }
+      .fp-Button.secondary {
+        background: transparent;
+        color: var(--figma-color-text);
+        outline-color: var(--figma-color-border);
+      }
+      .fp-Button.secondary:hover {
+        background: var(--figma-color-bg-hover);
+      }
 
-        .fp-stack { display: flex; flex-direction: column; gap: var(--space-2); }
-        .fp-row { display: flex; align-items: center; gap: var(--space-2); flex-wrap: wrap; }
+      .fp-stack {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-2);
+      }
+      .fp-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-2);
+        flex-wrap: wrap;
+      }
 
-        .fp-card {
-            border: 1px solid var(--figma-color-border);
-            border-radius: var(--radius-medium);
-            padding: var(--space-3);
-            background: #121212;
-        }
+      .fp-card {
+        border: 1px solid var(--figma-color-border);
+        border-radius: var(--radius-medium);
+        padding: var(--space-3);
+        background-color: var(--figma-color-bg);
+      }
 
-        .fp-status {
-            font-size: 12px;
-            color: var(--figma-color-text-secondary);
-        }
+      .fp-status {
+        font-size: 12px;
+        color: var(--figma-color-text-secondary);
+      }
 
-        .fp-json {
-            background: #0b0b0b;
-            border: 1px solid var(--figma-color-border);
-            border-radius: var(--radius-medium);
-            padding: var(--space-3);
-            color: var(--figma-color-text-secondary);
-            font-family: 'Roboto Mono', monospace;
-            font-size: 12px;
-            max-height: 220px;
-            overflow: auto;
-            white-space: pre-wrap;
-        }
+      .fp-json {
+        background-color: var(--figma-color-bg-tertiary);
+        border: 1px solid var(--figma-color-border);
+        border-radius: var(--radius-medium);
+        padding: var(--space-3);
+        color: var(--figma-color-text-secondary);
+        font-family: "Roboto Mono", monospace;
+        font-size: 12px;
+        max-height: 220px;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
 
-        .fp-tag {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 8px;
-            border-radius: 8px;
-            background: rgba(24, 160, 251, 0.12);
-            color: #8ad2ff;
-            font-size: 11px;
-            font-weight: 600;
-        }
+      .fp-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 8px;
+        background-color: var(--figma-color-bg-brand-tertiary);
+        color: var(--figma-color-text-brand);
+        font-size: 11px;
+        font-weight: 600;
+      }
 
-        .fp-divider {
-            height: 1px;
-            background: var(--figma-color-border);
-            margin: var(--space-2) 0;
-        }
+      .fp-divider {
+        height: 1px;
+        background: var(--figma-color-border);
+        margin: var(--space-2) 0;
+      }
     </style>
-</head>
-<body>
+  </head>
+  <body>
     <div class="fp-panel">
-        <header class="fp-section">
-            <div class="fp-row" style="justify-content: space-between;">
-                <h1 class="fp-title">아이콘 매핑 제안</h1>
-                <span class="fp-tag">로컬 매핑 DB</span>
-            </div>
-            <p class="fp-sub">메뉴명 기반 추천과 이미지 업로드 컴포넌트 생성을 지원합니다.</p>
-        </header>
+      <header class="fp-section">
+        <div class="fp-row" style="justify-content: space-between">
+          <h1 class="fp-title">아이콘 하이 매핑 제안</h1>
+          <span class="fp-tag">로컬 매핑 DB</span>
+        </div>
+        <p class="fp-sub">메뉴명 기반으로 아이콘을 추천합니다.</p>
+      </header>
 
-        <section class="fp-section">
-            <label for="menuName" class="fp-label">메뉴명 입력 (예: 재고물품관리, 퇴원환자별통계)</label>
-            <input type="text" id="menuName" value="재고물품관리" class="fp-Input" placeholder="메뉴명을 입력하세요">
-            <div class="fp-row" style="justify-content: flex-end;">
-                <button id="suggestButton" class="fp-Button" style="width: 100%;">아이콘 제안 받기</button>
-            </div>
-        </section>
+      <section class="fp-section">
+        <label for="menuName" class="fp-label"
+          >메뉴명 입력 (예: 재고물품관리, 퇴원환자별통계)</label
+        >
+        <input
+          type="text"
+          id="menuName"
+          value="재고물품관리"
+          class="fp-Input"
+          placeholder="메뉴명을 입력하세요"
+        />
+        <div class="fp-row" style="justify-content: flex-end">
+          <button id="suggestButton" class="fp-Button" style="width: 100%">
+            아이콘 제안 받기
+          </button>
+        </div>
+      </section>
 
+      <div id="loadingIndicator" class="fp-status" style="display: none">
+        로컬 매핑 중...
+      </div>
+
+      <section class="fp-section fp-card">
+        <div
+          class="fp-row"
+          style="justify-content: space-between; align-items: center"
+        >
+          <span class="fp-label">결과 요약</span>
+          <span class="fp-status">매칭/조합/미정의 키워드 피드백</span>
+        </div>
+        <div id="keywordFeedback" class="fp-stack"></div>
         <div class="fp-divider"></div>
-
-        <section class="fp-section">
-            <div class="fp-row" style="justify-content: space-between; align-items: center;">
-                <div class="fp-stack" style="gap: 4px;">
-                    <span class="fp-label">이미지 → 컴포넌트 생성 & 노드 ID 추출</span>
-                    <span class="fp-status">로컬 이미지를 올리면 Figma 캔버스에 컴포넌트를 만들고 ID를 반환합니다.</span>
-                </div>
-                <button id="uploadButton" class="fp-Button secondary">이미지 업로드</button>
-            </div>
-            <input type="file" id="imageInput" accept="image/*" style="display:none;">
-            <div id="uploadStatus" class="fp-status"></div>
-        </section>
-
-        <div id="loadingIndicator" class="fp-status" style="display:none;">로컬 매핑 중...</div>
-
-        <section class="fp-section fp-card">
-            <div class="fp-row" style="justify-content: space-between; align-items: center;">
-                <span class="fp-label" style="color:#fff;">결과 요약</span>
-                <span class="fp-status">매칭/조합/미정의 키워드 피드백</span>
-            </div>
-            <div id="keywordFeedback" class="fp-stack"></div>
-            <div class="fp-divider"></div>
-            <span class="fp-label">Raw JSON</span>
-            <pre id="resultsPre" class="fp-json">대기 중...</pre>
-        </section>
+        <span class="fp-label">Raw JSON</span>
+        <pre id="resultsPre" class="fp-json">대기 중...</pre>
+      </section>
     </div>
 
     <script>
-        const suggestButton = document.getElementById('suggestButton');
-        const keywordFeedback = document.getElementById('keywordFeedback');
-        const menuNameInput = document.getElementById('menuName');
-        const uploadButton = document.getElementById('uploadButton');
-        const imageInput = document.getElementById('imageInput');
-        const uploadStatus = document.getElementById('uploadStatus');
+      const suggestButton = document.getElementById("suggestButton");
+      const keywordFeedback = document.getElementById("keywordFeedback");
+      const menuNameInput = document.getElementById("menuName");
 
-        function triggerSuggest() {
-            const menuName = menuNameInput.value;
-            const loading = document.getElementById('loadingIndicator');
-            const resultsPre = document.getElementById('resultsPre');
+      function triggerSuggest() {
+        const menuName = menuNameInput.value;
+        const loading = document.getElementById("loadingIndicator");
+        const resultsPre = document.getElementById("resultsPre");
 
-            if (!menuName) return;
+        if (!menuName) return;
 
-            suggestButton.disabled = true;
-            loading.style.display = 'block';
-            resultsPre.textContent = '분석 요청 중...';
-            keywordFeedback.innerHTML = '';
+        suggestButton.disabled = true;
+        loading.style.display = "block";
+        resultsPre.textContent = "분석 요청 중...";
+        keywordFeedback.innerHTML = "";
 
-            // 1. Figma Plugin (code.ts)으로 메뉴명 전송
-            parent.postMessage({ pluginMessage: { type: 'suggest-icons', menuName } }, '*');
+        // 1. Figma Plugin (code.ts)으로 메뉴명 전송
+        parent.postMessage(
+          { pluginMessage: { type: "suggest-icons", menuName } },
+          "*"
+        );
+      }
+
+      suggestButton.onclick = triggerSuggest;
+
+      // 엔터 키 이벤트 처리
+      menuNameInput.addEventListener("keydown", (event) => {
+        if (event.key === "Enter" && !suggestButton.disabled) {
+          event.preventDefault();
+          triggerSuggest();
         }
+      });
 
-        suggestButton.onclick = triggerSuggest;
+      // 4. Figma Plugin (code.ts)에서 결과 수신
+      function renderKeywordFeedback(result) {
+        const {
+          input_keywords = [],
+          match_details = [],
+          asset_combinations = [],
+          missing_keywords = [],
+          missing_keyword_suggestions = [],
+        } = result;
 
-        // 엔터 키 이벤트 처리
-        menuNameInput.addEventListener('keydown', (event) => {
-            if (event.key === 'Enter' && !suggestButton.disabled) {
-                event.preventDefault();
-                triggerSuggest();
-            }
-        });
+        // Helper for styling
+        const primaryText = `color: var(--figma-color-text); font-weight: 600;`;
+        const tertiaryText = `color: var(--figma-color-text-tertiary);`;
+        const brandText = `color: var(--figma-color-text-brand);`;
+        const dangerText = `color: var(--figma-color-text-danger); font-weight: 600;`;
+        const secondaryText = `color: var(--figma-color-text-secondary);`;
+        const monoFont = `font-family: 'Roboto Mono', monospace;`;
 
-        uploadButton.onclick = () => {
-            uploadStatus.textContent = '';
-            imageInput.click();
-        };
+        const inputSummary = input_keywords.length
+          ? `<div><span style="${primaryText}">입력 키워드:</span> ${input_keywords.join(
+              ", "
+            )}</div>`
+          : `<div style="${tertiaryText}">입력과 직접 일치하는 키워드를 찾지 못했습니다.</div>`;
 
-        imageInput.addEventListener('change', (event) => {
-            const file = event.target.files?.[0];
-            if (!file) return;
-
-            uploadStatus.textContent = '이미지 읽는 중...';
-            const reader = new FileReader();
-            reader.onload = () => {
-                const result = reader.result;
-                if (typeof result !== 'string') {
-                    uploadStatus.textContent = '이미지 읽기에 실패했습니다.';
-                    return;
-                }
-                const base64 = result.split(',')[1];
-                uploadStatus.textContent = 'Figma로 전송 중...';
-                parent.postMessage(
-                    {
-                        pluginMessage: {
-                            type: 'upload-image',
-                            base64,
-                            fileName: file.name
-                        }
-                    },
-                    '*'
-                );
-            };
-            reader.onerror = () => {
-                uploadStatus.textContent = '이미지 읽기 오류가 발생했습니다.';
-            };
-            reader.readAsDataURL(file);
-        });
-
-        // 4. Figma Plugin (code.ts)에서 결과 수신
-        function renderKeywordFeedback(result) {
-            const {
-                input_keywords = [],
-                match_details = [],
-                asset_combinations = [],
-                missing_keywords = [],
-                missing_keyword_suggestions = []
-            } = result;
-
-            const inputSummary = input_keywords.length
-                ? `<div><span class="font-semibold text-gray-800">입력 키워드:</span> ${input_keywords.join(", ")}</div>`
-                : `<div class="text-gray-500">입력과 직접 일치하는 키워드를 찾지 못했습니다.</div>`;
-
-            const detailSummary = match_details.length
-                ? `<ul class="list-disc list-inside space-y-1">
-                        ${match_details.map((detail) => {
+        const detailSummary = match_details.length
+          ? `<ul style="list-style-position: inside; padding-left: 0; margin: 0; display: flex; flex-direction: column; gap: 4px;">
+                        ${match_details
+                          .map((detail) => {
                             const labelMap = {
-                                exact: "직접 일치",
-                                concept: "개념 매칭",
-                                synonym: "유사어 매핑"
+                              exact: "직접 일치",
+                              concept: "개념 매칭",
+                              synonym: "유사어 매핑",
                             };
-                            const inputToken = detail.inputToken ?? "직접 일치 없음";
-                            return `<li><span class="font-mono text-indigo-600">${inputToken}</span> → <span class="font-semibold">${detail.matchedKeyword}</span> <span class="text-xs text-gray-500">(${labelMap[detail.matchType]} · 유사도 ${detail.similarity})</span></li>`;
-                        }).join("")}
+                            const inputToken =
+                              detail.inputToken ?? "직접 일치 없음";
+                            return `<li><span style="${monoFont} ${brandText}">${inputToken}</span> → <span style="font-weight: 600;">${
+                              detail.matchedKeyword
+                            }</span> <span style="font-size: 11px; ${tertiaryText}">(${
+                              labelMap[detail.matchType]
+                            } · 유사도 ${detail.similarity})</span></li>`;
+                          })
+                          .join("")}
                    </ul>`
-                : `<div class="text-gray-500">매칭된 키워드가 없습니다. 기본 아이콘을 사용합니다.</div>`;
+          : `<div style="${tertiaryText}">매칭된 키워드가 없습니다. 기본 아이콘을 사용합니다.</div>`;
 
-            const combinationSummary = asset_combinations.length
-                ? `<div class="pt-4"><span class="font-semibold text-gray-800">조합 제안 (${asset_combinations.length}개)</span>
-                        <ol class="list-decimal list-inside space-y-1 text-indigo-600 text-sm">
-                            ${asset_combinations.map((combo, index) => `<li>Option ${index + 1}: ${combo.join(" + ")}</li>`).join("")}
+        const combinationSummary = asset_combinations.length
+          ? `<div style="padding-top: 12px;"><span style="${primaryText}">조합 제안 (${
+              asset_combinations.length
+            }개)</span>
+                        <ol style="list-style-position: inside; padding-left: 0; margin: 8px 0 0 0; color: var(--figma-color-text-brand); font-size: 12px; display: flex; flex-direction: column; gap: 4px;">
+                            ${asset_combinations
+                              .map(
+                                (combo, index) =>
+                                  `<li>Option ${index + 1}: ${combo.join(
+                                    " + "
+                                  )}</li>`
+                              )
+                              .join("")}
                         </ol>
                    </div>`
-                : `<div class="pt-4 text-gray-500">생성된 조합이 없습니다.</div>`;
+          : `<div style="padding-top: 12px; ${tertiaryText}">생성된 조합이 없습니다.</div>`;
 
-            const missingSummary = missing_keywords.length
-                ? `<div class="pt-4 border-t border-gray-200 pt-3">
-                        <span class="font-semibold text-red-600">신규 키워드/메타포 필요</span>
-                        <ul class="list-disc list-inside space-y-1 text-sm text-gray-700 mt-1">
-                            ${missing_keyword_suggestions.map((item) => {
+        const missingSummary = missing_keywords.length
+          ? `<div style="padding-top: 12px; margin-top: 12px; border-top: 1px solid var(--figma-color-border);">
+                        <span style="${dangerText}">신규 키워드/메타포 필요</span>
+                        <ul style="list-style-position: inside; padding-left: 0; margin: 8px 0 0 0; font-size: 12px; ${secondaryText}; display: flex; flex-direction: column; gap: 4px;">
+                            ${missing_keyword_suggestions
+                              .map((item) => {
                                 const related = item.related_keywords?.length
-                                    ? item.related_keywords.map((r) => `${r.keyword} (유사도 ${r.similarity})`).join(", ")
-                                    : "연관 키워드 제안 없음";
-                                return `<li><span class="font-mono text-gray-800">${item.missing}</span> → 메타포 제작 필요 <span class="text-xs text-gray-500">(${related})</span></li>`;
-                            }).join("")}
+                                  ? item.related_keywords
+                                      .map(
+                                        (r) =>
+                                          `${r.keyword} (유사도 ${r.similarity})`
+                                      )
+                                      .join(", ")
+                                  : "연관 키워드 제안 없음";
+                                return `<li><span style="${monoFont} color: var(--figma-color-text);">${item.missing}</span> → 메타포 제작 필요 <span style="font-size: 11px; ${tertiaryText}">(${related})</span></li>`;
+                              })
+                              .join("")}
                         </ul>
                    </div>`
-                : `<div class="pt-4 text-gray-500">미정의 키워드 없이 매칭되었습니다.</div>`;
+          : `<div style="padding-top: 12px; ${tertiaryText}">미정의 키워드 없이 매칭되었습니다.</div>`;
 
-            keywordFeedback.innerHTML = `${inputSummary}<div class="pt-2">${detailSummary}</div>${combinationSummary}${missingSummary}`;
+        keywordFeedback.innerHTML = `${inputSummary}<div style="padding-top: 8px;">${detailSummary}</div>${combinationSummary}${missingSummary}`;
+      }
+
+      onmessage = (event) => {
+        const data = event.data.pluginMessage;
+        const loading = document.getElementById("loadingIndicator");
+        const resultsPre = document.getElementById("resultsPre");
+
+        suggestButton.disabled = false;
+        loading.style.display = "none";
+
+        if (data.type === "suggestions-result") {
+          renderKeywordFeedback(data.result);
+          resultsPre.textContent = JSON.stringify(data.result, null, 2);
+        } else if (data.type === "suggestions-error") {
+          resultsPre.textContent = `오류 발생: ${data.message}`;
+          keywordFeedback.innerHTML = "";
         }
-
-        onmessage = (event) => {
-            const data = event.data.pluginMessage;
-            const loading = document.getElementById('loadingIndicator');
-            const resultsPre = document.getElementById('resultsPre');
-
-            suggestButton.disabled = false;
-            loading.style.display = 'none';
-
-            if (data.type === 'suggestions-result') {
-                renderKeywordFeedback(data.result);
-                resultsPre.textContent = JSON.stringify(data.result, null, 2);
-            } else if (data.type === 'suggestions-error') {
-                resultsPre.textContent = `오류 발생: ${data.message}`;
-                keywordFeedback.innerHTML = '';
-            } else if (data.type === 'upload-result') {
-                uploadStatus.textContent = `컴포넌트 생성 완료: ${data.name} (Node ID: ${data.nodeId})`;
-            } else if (data.type === 'upload-error') {
-                uploadStatus.textContent = `업로드 실패: ${data.message}`;
-            }
-        };
+      };
     </script>
-</body>
+  </body>
 </html>

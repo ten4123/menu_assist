@@ -16,6 +16,7 @@
     "@figma/plugin-typings": "^1.119.0",
     "@typescript-eslint/eslint-plugin": "^6.12.0",
     "@typescript-eslint/parser": "^6.12.0",
+    "esbuild": "0.27.0",
     "eslint": "^8.54.0",
     "ts-loader": "^9.5.4",
     "typescript": "^5.9.3",
@@ -45,7 +46,7 @@
     }
   },
   "dependencies": {
-    "@google/genai": "^1.29.0",
+
     "yarn": "^1.22.22"
   }
 }
