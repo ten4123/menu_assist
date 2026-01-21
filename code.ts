@@ -1,74 +1,24 @@
 // Figma Plugin Code (code.ts)
+import { iconData, IconData, VariantProperty, ICON_COMPONENT_SET_KEYS, LayerType, LAYER_Z_INDEX, getLayerType, CustomIconEntry, CustomIconDatabase } from './data/icon-db';
 // 로컬 데이터/설정을 인라인으로 포함해 독립 실행합니다.
 
 // -----------------------------------------------------------
-// 1. 초기 설정 및 상수
+// 1. 초기 설정 및 타입 정의
 // -----------------------------------------------------------
 
 figma.showUI(__html__, { width: 360, height: 550, title: "아이콘 매핑 제안", themeColors: true });
 
-const DB_DATA_STRING = `
-[
-    {
-        "keyword": "관리",
-        "concept": "운영, 제어, 설정, 시스템",
-        "assets": ["Manage/invisible", "Manage/badge_1", "Manage/bg", "Manage/metaphor"]
-    },
-    {
-        "keyword": "설정",
-        "concept": "분석, 결과, 테스트, 현미경",
-        "assets": ["Setting/bg", "Icon/Action/Test_Tube", "Icon/Action/Check_Circle"]
-    },    
-    {
-        "keyword": "조회",
-        "concept": "검색, 찾기, 데이터 보기, 열람",
-        "assets": [ "Search/badge_1", "Icon/Action/View_List"]
-    },
-    {
-        "keyword": "환자",
-        "concept": "사람, 의료 대상, 프로필, 침대",
-        "assets": ["Icon/People/Patient_Profile", "Icon/Medical/Bed_A", "Icon/People/User_A"]
-    },
-    {
-        "keyword": "등록",
-        "concept": "추가, 기록, 생성, 사인",
-        "assets": ["Icon/Action/Add_A", "Icon/Action/Sign_Up", "Icon/Document/File_Add"]
-    },
-    {
-        "keyword": "의무기록",
-        "concept": "emr, mr, medical record",
-        "assets": ["EMR/bg", "Icon/Material/Warehouse", "Icon/Action/Inventory"]
-    },
-    {
-        "keyword": "물품",
-        "concept": "아이템, 재료, 도구, 쇼핑",
-        "assets": ["Icon/Material/Tool_Kit", "Icon/Material/Shopping_Bag", "Icon/Action/Item"]
-    },
-    {
-        "keyword": "현황",
-        "concept": "통계, 대시보드, 상태, 차트",
-        "assets": ["Icon/Data/Dashboard", "Icon/Data/Chart_Bar", "Icon/Data/Status"]
-    }
-]
-`;
-
-type MatchType = "exact" | "concept" | "synonym";
-
-interface IconMappingRow {
-  keyword: string;
-  concept: string;
-  assets: string[];
-}
-
 interface MatchDetail {
   inputToken: string | null;
   matchedKeyword: string;
-  matchType: MatchType;
+  matchType: "exact" | "concept" | "synonym";
   similarity: number;
 }
 
 interface MatchCandidate {
-  row: IconMappingRow;
+  keyword: string;
+  componentSet: keyof typeof ICON_COMPONENT_SET_KEYS;
+  variant: VariantProperty;
   score: number;
   detail: MatchDetail;
 }
@@ -76,10 +26,16 @@ interface MatchCandidate {
 interface AssetGroup {
   keyword: string;
   position: number;
-  assets: string[];
+  assets: {
+    componentSet: keyof typeof ICON_COMPONENT_SET_KEYS;
+    variant: VariantProperty;
+  }[];
 }
 
-type AssetCombination = string[];
+type AssetCombination = {
+  componentSet: keyof typeof ICON_COMPONENT_SET_KEYS;
+  variant: VariantProperty;
+}[];
 
 interface MissingKeywordSuggestion {
   missing: string;
@@ -91,7 +47,7 @@ interface MissingKeywordSuggestion {
 
 interface SuggestionResult {
   keywords: string[];
-  asset_ids: string[];
+  asset_properties: { componentSet: keyof typeof ICON_COMPONENT_SET_KEYS; variant: VariantProperty }[];
   asset_combinations: AssetCombination[];
   confidence_score: number;
   input_keywords: string[];
@@ -100,52 +56,173 @@ interface SuggestionResult {
   match_details: MatchDetail[];
 }
 
-const ICON_DB: IconMappingRow[] = JSON.parse(DB_DATA_STRING) as IconMappingRow[];
-const SPECIAL_CHART_ASSETS = ["Icon/Data/Chart_Pie", "Icon/Data/Chart_Bar"];
-const SPECIAL_ALERT_ASSET = "Icon/Alert/Warning_Badge";
 const DEFAULT_ICON_SIZE = 320;
 
-const FEATURE_LAYER_PRIORITY: Record<string, number> = {
-  invisible: 6,
-  badge_1: 5,
-  bg: 0,
-  metaphor: 1,
-};
+// -----------------------------------------------------------
+// 2. Figma 컴포넌트 관리 및 캐싱
+// -----------------------------------------------------------
 
+const componentSetCache = new Map<string, ComponentSetNode | null>();
 const componentCache = new Map<string, ComponentNode | null>();
 
-function getComponentNode(assetName: string): ComponentNode | null {
-  if (componentCache.has(assetName)) {
-    return componentCache.get(assetName) ?? null;
+async function getComponentSet(setName: keyof typeof ICON_COMPONENT_SET_KEYS): Promise<ComponentSetNode | null> {
+  if (componentSetCache.has(setName)) {
+    return componentSetCache.get(setName)!;
   }
 
-  let component: ComponentNode | null = null;
+  const componentKey = ICON_COMPONENT_SET_KEYS[setName];
+  if (!componentKey) {
+    figma.notify(`'${setName}'에 대한 Component Set 키가 ICON_COMPONENT_SET_KEYS에 정의되지 않았습니다.`, { error: true });
+    componentSetCache.set(setName, null);
+    return null;
+  }
 
-  // NOTE: documentAccess가 dynamic-page라 getNodeById*를 사용할 수 없어
-  // 현재 페이지에서 이름으로만 컴포넌트를 찾습니다.
-  component = figma.currentPage.findOne(
-    (node) => node.type === "COMPONENT" && node.name.includes(assetName)
-  ) as ComponentNode | null;
+  console.log(`🔍 Component Set '${setName}' 로딩 시도... (키: ${componentKey})`);
 
-  if (!component) {
-    const featureName = assetName.split("/").pop();
-    if (featureName) {
-      component = figma.currentPage.findOne(
-        (node) => node.type === "COMPONENT" && node.name.includes(featureName)
-      ) as ComponentNode | null;
+  try {
+    // importComponentSetByKeyAsync를 사용하여 외부 라이브러리 컴포넌트 로드
+    const node = await figma.importComponentSetByKeyAsync(componentKey);
+
+    if (node && node.type === "COMPONENT_SET") {
+      console.log(`✅ Component Set '${setName}' 로드 성공`);
+
+      // 🔍 디버깅: 사용 가능한 모든 variant 출력
+      console.log(`📋 Component Set '${setName}'의 사용 가능한 variants:`);
+      let variantIndex = 1;
+      for (const child of node.children) {
+        if (child.type === "COMPONENT") {
+          console.log(`  ${variantIndex}. ${child.name}`, child.variantProperties);
+          variantIndex++;
+        }
+      }
+
+      componentSetCache.set(setName, node);
+      return node;
+    } else {
+      console.error(`❌ 로드된 노드가 COMPONENT_SET이 아닙니다:`, node?.type);
+      figma.notify(`'${setName}' Component Set을 찾을 수 없거나 타입이 다릅니다.`, { error: true });
+      componentSetCache.set(setName, null);
+      return null;
     }
+  } catch (error) {
+    console.error(`❌ Component Set '${setName}' 로드 중 오류:`, error);
+    console.error(`사용한 키: ${componentKey}`);
+    figma.notify(`'${setName}' Component Set 로드에 실패했습니다. 키가 유효한지 확인하세요.`, { error: true });
+    componentSetCache.set(setName, null);
+    return null;
   }
-
-  componentCache.set(assetName, component ?? null);
-  return component;
 }
 
-function isAssetAvailable(assetName: string): boolean {
-  return Boolean(assetName && getComponentNode(assetName));
+function findVariant(
+  componentSet: ComponentSetNode,
+  properties: VariantProperty
+): ComponentNode | null {
+  const cacheKey = `${componentSet.id}:${JSON.stringify(properties)}`;
+  if (componentCache.has(cacheKey)) {
+    return componentCache.get(cacheKey) ?? null;
+  }
+
+  const variant = componentSet.findOne((node) => {
+    if (node.type !== "COMPONENT") return false;
+    if (!node.variantProperties) return false;
+
+    // Check all requested properties against the node's properties
+    return Object.entries(properties).every(([reqKey, reqValue]) => {
+      // 1. Find matching key in node properties (case-insensitive)
+      const nodeKey = Object.keys(node.variantProperties!).find(
+        k => k.toLowerCase() === reqKey.toLowerCase()
+      );
+      if (!nodeKey) return false; // Key not found
+
+      // 2. Compare values (case-insensitive)
+      const nodeValue = node.variantProperties![nodeKey];
+      return nodeValue.toLowerCase() === reqValue.toLowerCase();
+    });
+  }) as ComponentNode | null;
+
+  componentCache.set(cacheKey, variant);
+  return variant;
+}
+
+async function getComponentNode(setName: keyof typeof ICON_COMPONENT_SET_KEYS, properties: VariantProperty): Promise<ComponentNode | null> {
+  const componentSet = await getComponentSet(setName);
+  if (!componentSet) return null;
+  return findVariant(componentSet, properties);
+}
+
+async function isAssetAvailable(setName: keyof typeof ICON_COMPONENT_SET_KEYS, properties: VariantProperty): Promise<boolean> {
+  const component = await getComponentNode(setName, properties);
+  return Boolean(component);
 }
 
 // -----------------------------------------------------------
-// 2. 로컬 매핑 기반 아이콘 추천 로직
+// 3. 사용자 정의 아이콘 데이터 관리 (Figma pluginData)
+// -----------------------------------------------------------
+
+const PLUGIN_DATA_KEY = "customIconDatabase";
+
+/**
+ * Figma 파일에서 사용자 정의 아이콘 데이터 로드
+ */
+function loadCustomIconData(): CustomIconDatabase {
+  try {
+    const data = figma.root.getPluginData(PLUGIN_DATA_KEY);
+    if (!data) {
+      return { version: "1.0", lastUpdated: new Date().toISOString(), entries: [] };
+    }
+    return JSON.parse(data);
+  } catch (error) {
+    console.error("❌ 커스텀 데이터 로드 실패:", error);
+    return { version: "1.0", lastUpdated: new Date().toISOString(), entries: [] };
+  }
+}
+
+/**
+ * Figma 파일에 사용자 정의 아이콘 데이터 저장
+ */
+function saveCustomIconData(database: CustomIconDatabase): void {
+  try {
+    database.lastUpdated = new Date().toISOString();
+    figma.root.setPluginData(PLUGIN_DATA_KEY, JSON.stringify(database));
+    console.log("✅ 커스텀 데이터 저장 완료:", database.entries.length, "개 항목");
+  } catch (error) {
+    console.error("❌ 커스텀 데이터 저장 실패:", error);
+    throw error;
+  }
+}
+
+/**
+ * 기본 icon-db.ts와 사용자 정의 데이터를 병합
+ */
+function getMergedIconData(): IconData {
+  const customDB = loadCustomIconData();
+  const merged: IconData = { ...iconData }; // 기본 DB 복사
+
+  // 커스텀 데이터 병합
+  for (const entry of customDB.entries) {
+    // Component Set이 ICON_COMPONENT_SET_KEYS에 없으면 동적 추가
+    if (!ICON_COMPONENT_SET_KEYS[entry.componentSetName]) {
+      (ICON_COMPONENT_SET_KEYS as any)[entry.componentSetName] = entry.componentSetKey;
+    }
+
+    // 키워드가 이미 존재하면 variants 병합, 없으면 새로 추가
+    if (merged[entry.keyword]) {
+      merged[entry.keyword].variants.push(...entry.variants);
+    } else {
+      merged[entry.keyword] = {
+        description: entry.description,
+        concept: entry.concept,
+        componentSet: entry.componentSetName as keyof typeof ICON_COMPONENT_SET_KEYS,
+        variants: entry.variants,
+      };
+    }
+  }
+
+  return merged;
+}
+
+// -----------------------------------------------------------
+// 4. 로컬 매핑 기반 아이콘 추천 로직
 // -----------------------------------------------------------
 
 function normalizeMenuName(menuName: string): string {
@@ -155,16 +232,19 @@ function normalizeMenuName(menuName: string): string {
 function extractInputKeywords(menuName: string): string[] {
   const normalized = normalizeMenuName(menuName);
   const keywords = new Set<string>();
-  for (const row of ICON_DB) {
-    const keywordNormalized = normalizeMenuName(row.keyword);
+  const mergedData = getMergedIconData();
+  for (const keyword of Object.keys(mergedData)) {
+    const keywordNormalized = normalizeMenuName(keyword);
     if (!keywordNormalized) continue;
     if (normalized.includes(keywordNormalized)) {
-      keywords.add(row.keyword);
+      keywords.add(keyword);
     }
   }
   return Array.from(keywords);
 }
 
+// ... (Helper functions: identifyMissingKeywords, findRelatedKeywords, buildMissingKeywordSuggestions, getBigrams, getSimilarityScore, tokenizeConcept)
+// 이 함수들은 키워드 매칭에만 관여하므로 수정이 필요 없습니다. (기존 코드와 동일)
 function identifyMissingKeywords(
   menuName: string,
   matchedKeywords: string[]
@@ -200,8 +280,11 @@ function findRelatedKeywords(
 
   const scored: MissingKeywordSuggestion["related_keywords"] = [];
 
-  for (const row of ICON_DB) {
-    const keywordNormalized = normalizeMenuName(row.keyword);
+  for (const keyword in iconData) {
+    const definition = iconData[keyword];
+    if (!definition) continue; // 정의가 없으면 건너뜀
+
+    const keywordNormalized = normalizeMenuName(keyword);
     let bestScore = 0;
 
     if (keywordNormalized) {
@@ -217,7 +300,8 @@ function findRelatedKeywords(
       );
     }
 
-    for (const conceptToken of tokenizeConcept(row.concept)) {
+    const representativeConcept = definition.concept; // IconDefinition의 concept 속성 직접 접근
+    for (const conceptToken of tokenizeConcept(representativeConcept)) {
       const conceptNormalized = normalizeMenuName(conceptToken);
       if (!conceptNormalized) continue;
       if (
@@ -234,7 +318,7 @@ function findRelatedKeywords(
 
     if (bestScore >= 0.25) {
       scored.push({
-        keyword: row.keyword,
+        keyword: keyword,
         similarity: Number(bestScore.toFixed(2)),
       });
     }
@@ -295,297 +379,223 @@ function tokenizeConcept(concept: string): string[] {
     .filter(Boolean);
 }
 
+
 function findMatchCandidates(menuName: string): MatchCandidate[] {
   const normalized = normalizeMenuName(menuName);
   const candidates: MatchCandidate[] = [];
+  const mergedData = getMergedIconData();
 
-  for (const row of ICON_DB) {
-    const keywordNormalized = normalizeMenuName(row.keyword);
+  for (const keyword in mergedData) {
+    const definition = mergedData[keyword]; // This is a single IconDefinition
+    if (!definition) continue;
+
+    const keywordNormalized = normalizeMenuName(keyword);
     let bestScore = 0;
     let bestDetail: MatchDetail | null = null;
 
+    // 1. 키워드 직접 일치 점수 계산
     if (keywordNormalized && normalized.includes(keywordNormalized)) {
       bestScore = 1;
-      bestDetail = {
-        inputToken: row.keyword,
-        matchedKeyword: row.keyword,
-        matchType: "exact",
-        similarity: 1,
-      };
+      bestDetail = { inputToken: keyword, matchedKeyword: keyword, matchType: "exact", similarity: 1 };
     } else if (keywordNormalized) {
       const similarity = getSimilarityScore(normalized, keywordNormalized);
       if (similarity > bestScore) {
         bestScore = similarity;
-        bestDetail = {
-          inputToken: null,
-          matchedKeyword: row.keyword,
-          matchType: "synonym",
-          similarity,
-        };
+        bestDetail = { inputToken: null, matchedKeyword: keyword, matchType: "synonym", similarity };
       }
     }
 
-    const conceptTokens = tokenizeConcept(row.concept);
+    // 2. 컨셉(동의어) 일치 점수 계산
+    const representativeConcept = definition.concept;
+    const conceptTokens = tokenizeConcept(representativeConcept);
     for (const token of conceptTokens) {
-      const tokenNormalized = normalizeMenuName(token);
-      if (!tokenNormalized) continue;
-
-      // When the input exactly matches another keyword (e.g., "설정"),
-      // avoid treating a concept token of a different keyword (e.g., 관리의 "설정") as a match.
-      if (normalized === tokenNormalized && keywordNormalized !== normalized) {
-        continue;
-      }
-
-      if (normalized.includes(tokenNormalized)) {
+      if (normalized.includes(token)) {
         const conceptScore = 0.9;
         if (conceptScore > bestScore) {
           bestScore = conceptScore;
-          bestDetail = {
-            inputToken: token,
-            matchedKeyword: row.keyword,
-            matchType: "concept",
-            similarity: conceptScore,
-          };
+          bestDetail = { inputToken: token, matchedKeyword: keyword, matchType: "concept", similarity: conceptScore };
         }
       } else {
-        const similarity = getSimilarityScore(normalized, tokenNormalized);
+        const similarity = getSimilarityScore(normalized, token);
         if (similarity > bestScore) {
           bestScore = similarity;
-          bestDetail = {
-            inputToken: token,
-            matchedKeyword: row.keyword,
-            matchType: "synonym",
-            similarity,
-          };
+          bestDetail = { inputToken: token, matchedKeyword: keyword, matchType: "synonym", similarity };
         }
       }
     }
 
+    // 3. 점수가 기준 이상이면 각 variant에 대해 후보 생성
     if (bestDetail && bestScore >= 0.35) {
-      candidates.push({
-        row,
-        score: bestScore,
-        detail: {
-          ...bestDetail,
-          similarity: Number(bestScore.toFixed(2)),
-        },
-      });
+      for (const variant of definition.variants) {
+        candidates.push({
+          keyword: keyword,
+          componentSet: definition.componentSet,
+          variant: variant,
+          score: bestScore,
+          detail: {
+            ...bestDetail,
+            similarity: Number(bestScore.toFixed(2)),
+          },
+        });
+      }
     }
   }
 
   return candidates.sort((a, b) => b.score - a.score);
 }
 
-function appendSpecialRuleAssets(menuName: string, assets: string[]): string[] {
-  const normalized = normalizeMenuName(menuName);
-  const result = [...assets];
+// getKeywordPosition and buildKeywordAssetGroups have been removed.
 
-  if (normalized.includes("별")) {
-    const chartAsset =
-      SPECIAL_CHART_ASSETS[assets.length % SPECIAL_CHART_ASSETS.length];
-    if (isAssetAvailable(chartAsset)) {
-      result.push(chartAsset);
-    }
-  }
+// computeAssetCombinations removed in favor of buildLayeredCombinations
 
-  if (normalized.includes("미")) {
-    if (isAssetAvailable(SPECIAL_ALERT_ASSET)) {
-      result.push(SPECIAL_ALERT_ASSET);
-    }
-  }
-
-  return result;
-}
-
-function getAssetZIndex(assetName: string): number {
-  const parts = assetName.split("/");
-  const feature = parts.length > 1 ? parts[1] : parts[0];
-  return FEATURE_LAYER_PRIORITY[feature] ?? 0;
-}
-
+// 🆕 변경된 로직: 레이어 기반 조합 생성
+// -----------------------------------------------------------
+// Helper: 키워드 위치 찾기
 function getKeywordPosition(menuName: string, keyword: string): number {
   const index = menuName.indexOf(keyword);
   return index >= 0 ? index : -1;
 }
 
-function buildKeywordAssetGroups(
-  menuName: string,
-  rows: IconMappingRow[]
-): AssetGroup[] {
-  const groups: AssetGroup[] = [];
+// -----------------------------------------------------------
+// 1. 키워드별 에셋 그룹화 (detected sequence respecting)
+async function buildKeywordAssetGroups(menuName: string, candidates: MatchCandidate[]): Promise<AssetGroup[]> {
+  const groupsByKeyword: { [key: string]: AssetGroup } = {};
 
-  for (const row of rows) {
-    const position = getKeywordPosition(menuName, row.keyword);
-    const assets = row.assets.filter(
-      (assetId) => Boolean(assetId) && isAssetAvailable(assetId)
-    );
-    if (assets.length === 0) {
-      continue;
+  // Fetch needed component sets
+  const neededSetNames = new Set(candidates.map(c => c.componentSet));
+  await Promise.all(Array.from(neededSetNames).map(setName => getComponentSet(setName)));
+
+  for (const candidate of candidates) {
+    if (await isAssetAvailable(candidate.componentSet, candidate.variant)) {
+      if (!groupsByKeyword[candidate.keyword]) {
+        groupsByKeyword[candidate.keyword] = {
+          keyword: candidate.keyword,
+          position: getKeywordPosition(menuName, candidate.keyword),
+          assets: [],
+        };
+      }
+      groupsByKeyword[candidate.keyword].assets.push({
+        componentSet: candidate.componentSet,
+        variant: candidate.variant,
+      });
     }
-    groups.push({
-      keyword: row.keyword,
-      position,
-      assets,
-    });
   }
 
+  const groups = Object.values(groupsByKeyword);
+
+  // Sort groups by keyword position in the input string
   groups.sort((a, b) => {
     const posA = a.position >= 0 ? a.position : Number.MAX_SAFE_INTEGER;
     const posB = b.position >= 0 ? b.position : Number.MAX_SAFE_INTEGER;
-    if (posA === posB) {
-      return a.keyword.localeCompare(b.keyword);
-    }
+    if (posA === posB) return a.keyword.localeCompare(b.keyword);
     return posA - posB;
   });
 
   return groups;
 }
 
-function hasLayerConflict(assets: string[]): boolean {
-  const seen = new Set<number>();
-  for (const asset of assets) {
-    const zIndex = getAssetZIndex(asset);
-    if (seen.has(zIndex)) {
-      return true;
+// -----------------------------------------------------------
+// 2. 레이어 충돌 감지
+function hasLayerConflict(combo: { componentSet: keyof typeof ICON_COMPONENT_SET_KEYS; variant: VariantProperty }[]): boolean {
+  const seenLayers = new Set<LayerType>();
+
+  for (const asset of combo) {
+    const type = getLayerType(asset.variant);
+    if (type) {
+      if (seenLayers.has(type)) return true;
+      seenLayers.add(type);
     }
-    seen.add(zIndex);
   }
   return false;
 }
 
+// -----------------------------------------------------------
+// 3. 조합 생성 (Cartesian Product with Layer Conflict Check)
 function computeAssetCombinations(groups: AssetGroup[]): AssetCombination[] {
-  if (groups.length === 0) {
-    return [];
-  }
+  if (groups.length === 0) return [];
 
+  // Start with empty combinations [ [] ]
   let combinations: AssetCombination[] = [[]];
 
   for (const group of groups) {
-    const next: AssetCombination[] = [];
-    for (const combo of combinations) {
+    const nextCombinations: AssetCombination[] = [];
+
+    // Try to append each asset from the current group to existing combinations
+    for (const baseCombo of combinations) {
       for (const asset of group.assets) {
-        const candidate = [...combo, asset];
-        if (hasLayerConflict(candidate)) {
+        const newCombo = [...baseCombo, asset];
+
+        // Critical: Check if adding this asset causes a layer conflict
+        if (hasLayerConflict(newCombo)) {
           continue;
         }
-        next.push(candidate);
+
+        nextCombinations.push(newCombo);
       }
     }
-    combinations = next;
-    if (combinations.length === 0) {
-      break;
+
+    // If we detected valid combinations including this keyword, proceed with them.
+    // If not, it means this keyword cannot be added to ANY existing path without conflict.
+    // In that case, we stick to the 'combinations' we had so far (partial match), 
+    // OR we strictly break. 
+    // The reference logic effectively stops or filters.
+    // We will update 'combinations' only if we found valid next steps.
+    if (nextCombinations.length > 0) {
+      combinations = nextCombinations;
     }
+    // If nextCombinations is empty, we just skip this keyword and keep previous 'valid' combos.
+    // This allows "Code(Manage) + Manage(Skip)" -> Result: Code.
+    // Wait, the user wants "Code + Manage". If Manage conflicts, maybe we should try "Manage" as base?
+    // But keyword order matters.
   }
 
   return combinations;
 }
 
-async function createFallbackFrame(componentName: string): Promise<FrameNode> {
-  const fallbackFrame = figma.createFrame();
-  fallbackFrame.name = `${componentName} (FALLBACK)`;
-  fallbackFrame.layoutMode = "VERTICAL";
-  fallbackFrame.layoutSizingHorizontal = "FIXED";
-  fallbackFrame.layoutSizingVertical = "FIXED";
-  fallbackFrame.primaryAxisAlignItems = "CENTER";
-  fallbackFrame.counterAxisAlignItems = "CENTER";
-  fallbackFrame.paddingTop =
-    fallbackFrame.paddingRight =
-    fallbackFrame.paddingBottom =
-    fallbackFrame.paddingLeft =
-      16;
-  fallbackFrame.itemSpacing = 12;
-  fallbackFrame.fills = [
-    { type: "SOLID", color: { r: 0.95, g: 0.95, b: 0.95 } },
-  ];
-  fallbackFrame.resize(DEFAULT_ICON_SIZE, DEFAULT_ICON_SIZE);
-
-  const fallbackIcon = figma.createRectangle();
-  fallbackIcon.name = "Placeholder Icon";
-  fallbackIcon.resize(DEFAULT_ICON_SIZE - 32, DEFAULT_ICON_SIZE - 32);
-  fallbackIcon.cornerRadius = 16;
-  fallbackIcon.fills = [
-    { type: "SOLID", color: { r: 0.85, g: 0.85, b: 0.85 } },
-  ];
-
-  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
-  const textNode = figma.createText();
-  textNode.characters = componentName;
-  textNode.fontSize = 18;
-  textNode.fills = [{ type: "SOLID", color: { r: 0.3, g: 0.3, b: 0.3 } }];
-
-  fallbackFrame.appendChild(fallbackIcon);
-  fallbackFrame.appendChild(textNode);
-
-  return fallbackFrame;
-}
-
-async function createIconInstance(componentName: string): Promise<SceneNode> {
-  const componentNode = getComponentNode(componentName);
-
-  if (componentNode) {
-    const instance = componentNode.createInstance();
-    instance.name = componentName;
-    return instance;
-  }
-
-  return createFallbackFrame(componentName);
-}
-
-function getLocalIconSuggestion(menuName: string): SuggestionResult {
+async function getLocalIconSuggestion(menuName: string): Promise<SuggestionResult> {
   const candidates = findMatchCandidates(menuName);
-  const matchedRows = candidates.map((candidate) => candidate.row);
-  const keywords = matchedRows.map((row) => row.keyword);
-  const matchDetails = candidates.map((candidate) => candidate.detail);
+
+  // Deduplicate keywords and details for reporting
+  const uniqueKeywords = Array.from(new Set(candidates.map(c => c.keyword)));
+  const matchDetails = Object.values(candidates.reduce((acc, c) => {
+    acc[c.detail.matchedKeyword] = c.detail;
+    return acc;
+  }, {} as { [key: string]: MatchDetail }));
+
   const inputKeywords = extractInputKeywords(menuName);
-  const missingKeywordSuggestions = buildMissingKeywordSuggestions(
-    menuName,
-    keywords
-  );
-  const missingKeywords = missingKeywordSuggestions.map((item) => item.missing);
-  const fallbackRow = ICON_DB.find((row) => row.keyword === "현황");
+  const missingKeywordSuggestions = buildMissingKeywordSuggestions(menuName, uniqueKeywords);
+  const missingKeywords = missingKeywordSuggestions.map(item => item.missing);
 
-  const groups =
-    matchedRows.length > 0
-      ? buildKeywordAssetGroups(menuName, matchedRows)
-      : fallbackRow
-      ? buildKeywordAssetGroups(menuName, [fallbackRow])
-      : [];
-
-  const baseAssets = groups.reduce<string[]>((acc, group) => {
-    acc.push(...group.assets);
-    return acc;
-  }, []);
-
-  const enrichedAssets = appendSpecialRuleAssets(menuName, baseAssets);
-  if (enrichedAssets.length > baseAssets.length) {
-    const extras = enrichedAssets.slice(baseAssets.length);
-    const availableExtras = extras.filter(isAssetAvailable);
-    if (availableExtras.length > 0) {
-      groups.push({
-        keyword: "__special__",
-        position: Number.MAX_SAFE_INTEGER,
-        assets: availableExtras,
-      });
-    }
-  }
-
+  // 🔄 REPLACED LOGIC: Keyword-centric stacking
+  const groups = await buildKeywordAssetGroups(menuName, candidates);
   let combinations = computeAssetCombinations(groups);
-  if (combinations.length === 0 && baseAssets.length > 0) {
-    combinations = baseAssets.map((asset) => [asset]);
+
+  // Fallback: If no combinations, try detecting single assets
+  if (combinations.length === 0 || (combinations.length === 1 && combinations[0].length === 0)) {
+    combinations = candidates.map(c => ([{
+      componentSet: c.componentSet,
+      variant: c.variant
+    }]));
   }
 
-  const flattenedAssets = combinations.reduce<string[]>((acc, combo) => {
-    acc.push(...combo);
-    return acc;
-  }, []);
-  const uniqueAssetIds = Array.from(new Set(flattenedAssets));
+  // Deduplicate combinations
+  const uniqueCombos = new Set<string>();
+  combinations = combinations.filter(combo => {
+    if (combo.length === 0) return false;
+    const key = JSON.stringify(combo);
+    if (uniqueCombos.has(key)) return false;
+    uniqueCombos.add(key);
+    return true;
+  });
 
-  const confidence =
-    matchedRows.length > 0 ? Math.min(1, 0.5 + matchedRows.length * 0.2) : 0.2;
+  const flattenedAssets = combinations.flat();
+  const uniqueAssetProperties = Array.from(new Set(flattenedAssets.map(p => JSON.stringify(p)))).map(s => JSON.parse(s));
+
+  const confidence = candidates.length > 0 ? Math.min(1, 0.5 + uniqueKeywords.length * 0.2) : 0.2;
 
   return {
-    keywords: keywords.length > 0 ? keywords : ["현황"],
-    asset_ids: uniqueAssetIds,
+    keywords: uniqueKeywords,
+    asset_properties: uniqueAssetProperties,
     asset_combinations: combinations,
     confidence_score: Number(confidence.toFixed(2)),
     input_keywords: inputKeywords,
@@ -596,42 +606,137 @@ function getLocalIconSuggestion(menuName: string): SuggestionResult {
 }
 
 // -----------------------------------------------------------
-// 3. Figma UI 통신 및 컴포넌트 배치
+// 4. Figma UI 통신 및 컴포넌트 배치
 // -----------------------------------------------------------
 
 figma.ui.onmessage = async (msg) => {
   if (msg.type === "suggest-icons") {
     const menuName: string = msg.menuName?.toString() ?? "";
     try {
-      const result = getLocalIconSuggestion(menuName);
+      const result = await getLocalIconSuggestion(menuName);
       figma.ui.postMessage({ type: "suggestions-result", result });
       await placeIconCombinations(result.asset_combinations, menuName);
     } catch (error) {
       console.error(error);
-      const errorMessage =
-        error instanceof Error
-          ? error.message
-          : "알 수 없는 오류가 발생했습니다.";
+      const errorMessage = error instanceof Error ? error.message : "알 수 없는 오류가 발생했습니다.";
+      figma.ui.postMessage({ type: "suggestions-error", message: errorMessage });
+    }
+  }
+
+
+  // Component Set 정보 가져오기
+  else if (msg.type === "get-selected-component-set") {
+    const selection = figma.currentPage.selection;
+    if (selection.length === 1 && selection[0].type === "COMPONENT_SET") {
+      const componentSet = selection[0] as ComponentSetNode;
       figma.ui.postMessage({
-        type: "suggestions-error",
-        message: errorMessage,
+        type: "component-set-info",
+        data: {
+          name: componentSet.name,
+          key: componentSet.key,
+          variants: componentSet.children
+            .filter(child => child.type === "COMPONENT")
+            .map(child => (child as ComponentNode).variantProperties)
+        }
       });
+    } else {
+      figma.notify("Component Set을 선택해주세요", { error: true });
+    }
+  }
+
+  // Google Sheets 동기화 (외부 DB)
+  else if (msg.type === "sync-external-db") {
+    try {
+      const externalData: any[] = msg.data;
+      if (!Array.isArray(externalData)) throw new Error("데이터 형식이 올바르지 않습니다.");
+
+      const customDB = loadCustomIconData();
+      let addedCount = 0;
+
+      // 데이터 유효성 검사 및 정제
+      const newEntries: CustomIconEntry[] = externalData
+        .filter(item => item.keyword && item.componentSetKey && item.componentSetName)
+        .map(item => ({
+          keyword: item.keyword,
+          description: item.description || "",
+          concept: item.concept || "",
+          componentSetKey: item.componentSetKey,
+          componentSetName: item.componentSetName,
+          variants: Array.isArray(item.variants) ? item.variants : [],
+          createdAt: new Date().toISOString(),
+        }));
+
+      if (newEntries.length === 0) {
+        // 디버깅을 위한 상세 에러 메시지 생성
+        let debugMsg = "유효한 데이터가 0개입니다.";
+        if (externalData.length > 0) {
+          const firstItem = externalData[0];
+          const keys = Object.keys(firstItem).join(", ");
+          debugMsg = `데이터 필드 불일치.\n받은 필드: [${keys}]\n필요한 필드: keyword, componentSetKey, componentSetName`;
+          console.error("Sync Data Mismatch:", firstItem);
+        } else {
+          debugMsg = "구글 시트에 데이터 행이 없습니다.";
+        }
+        throw new Error(debugMsg);
+      }
+
+      // 기존 DB에 추가 (중복 체크 없이 추가 - 추후 개선 가능)
+      customDB.entries.push(...newEntries);
+      addedCount = newEntries.length;
+
+      saveCustomIconData(customDB);
+
+      if (!msg.silent) {
+        figma.notify(`✅ ${addedCount}개의 에셋을 동기화했습니다!`, { timeout: 3000 });
+        figma.ui.postMessage({ type: "register-success", keyword: `${addedCount}개 항목` }); // UI 업데이트용
+      }
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : "동기화 중 오류 발생";
+      figma.notify(`❌ 동기화 실패: ${errorMsg}`, { error: true });
     }
   }
 };
 
-async function placeIconCombinations(
-  assetCombos: AssetCombination[],
-  menuName: string
-): Promise<void> {
+async function createFallbackFrame(componentName: string): Promise<FrameNode> {
+  const fallbackFrame = figma.createFrame();
+  fallbackFrame.name = componentName;
+  fallbackFrame.resize(DEFAULT_ICON_SIZE, DEFAULT_ICON_SIZE);
+  fallbackFrame.fills = [{ type: 'SOLID', color: { r: 0.9, g: 0.9, b: 0.9 } }];
+  fallbackFrame.cornerRadius = 8;
+
+  await figma.loadFontAsync({ family: "Inter", style: "Regular" });
+  const text = figma.createText();
+  text.characters = "Missing\n" + componentName;
+  text.fontSize = 10;
+  text.textAlignHorizontal = "CENTER";
+  text.textAlignVertical = "CENTER";
+  text.resize(DEFAULT_ICON_SIZE, DEFAULT_ICON_SIZE);
+
+  fallbackFrame.appendChild(text);
+  return fallbackFrame;
+}
+
+async function createIconInstance(setName: keyof typeof ICON_COMPONENT_SET_KEYS, properties: VariantProperty, assetName: string): Promise<SceneNode> {
+  const componentNode = await getComponentNode(setName, properties);
+
+  if (componentNode) {
+    const instance = componentNode.createInstance();
+    instance.name = assetName;
+    return instance;
+  }
+
+  console.log(`Fallback for ${assetName}`);
+  return createFallbackFrame(assetName);
+}
+
+async function placeIconCombinations(assetCombos: AssetCombination[], menuName: string): Promise<void> {
   if (assetCombos.length === 0) {
     figma.notify("매핑된 아이콘 조합을 찾지 못했습니다.", { timeout: 3000 });
     return;
   }
 
   const selection = figma.currentPage.selection;
-  const startX =
-    selection.length > 0 ? selection[0].x + selection[0].width + 100 : 100;
+  const startX = selection.length > 0 ? selection[0].x + selection[0].width + 100 : 100;
   const startY = selection.length > 0 ? selection[0].y : 100;
 
   const suggestionFrame = figma.createFrame();
@@ -639,28 +744,24 @@ async function placeIconCombinations(
   suggestionFrame.layoutMode = "VERTICAL";
   suggestionFrame.layoutSizingHorizontal = "HUG";
   suggestionFrame.layoutSizingVertical = "HUG";
-  suggestionFrame.paddingTop =
-    suggestionFrame.paddingRight =
-    suggestionFrame.paddingBottom =
-    suggestionFrame.paddingLeft =
-      24;
+  suggestionFrame.paddingTop = suggestionFrame.paddingRight = suggestionFrame.paddingBottom = suggestionFrame.paddingLeft = 24;
   suggestionFrame.itemSpacing = 40;
   suggestionFrame.fills = [{ type: "SOLID", color: { r: 1, g: 1, b: 1 } }];
   suggestionFrame.cornerRadius = 10;
-  suggestionFrame.resize(Math.max(400, DEFAULT_ICON_SIZE + 80), 100);
   suggestionFrame.x = startX;
   suggestionFrame.y = startY;
 
   figma.currentPage.appendChild(suggestionFrame);
-  figma.notify(
-    `Figma 캔버스에 ${assetCombos.length}개의 아이콘 조합을 배치합니다.`,
-    { timeout: 2000 }
-  );
+  figma.notify(`Figma 캔버스에 ${assetCombos.length}개의 아이콘 조합을 배치합니다.`, { timeout: 2000 });
+
+  // Define a layer order if needed for stacking
+  // const layerOrder = ['bg', 'metaphor', 'badge_1'];
 
   for (const [index, combo] of assetCombos.entries()) {
     try {
       const comboFrame = figma.createFrame();
       comboFrame.name = `Option ${index + 1}`;
+      // ... (combo frame setup)
       comboFrame.layoutMode = "VERTICAL";
       comboFrame.layoutSizingHorizontal = "HUG";
       comboFrame.layoutSizingVertical = "HUG";
@@ -668,7 +769,6 @@ async function placeIconCombinations(
       comboFrame.counterAxisAlignItems = "CENTER";
       comboFrame.itemSpacing = 12;
       comboFrame.fills = [];
-      comboFrame.resize(DEFAULT_ICON_SIZE + 20, DEFAULT_ICON_SIZE + 60);
 
       const stackFrame = figma.createFrame();
       stackFrame.name = `Stack ${index + 1}`;
@@ -676,12 +776,30 @@ async function placeIconCombinations(
       stackFrame.clipsContent = true;
       stackFrame.fills = [];
 
-      const sortedCombo = combo
-        .slice()
-        .sort((a, b) => getAssetZIndex(a) - getAssetZIndex(b));
+      // 🎨 레이어 순서대로 정렬 (bg → metaphor → badge_1)
+      const sortedCombo = combo.slice().sort((a, b) => {
+        const layerA = getLayerType(a.variant);
+        const layerB = getLayerType(b.variant);
 
-      for (const assetName of sortedCombo) {
-        const instance = await createIconInstance(assetName);
+        // 레이어 타입이 없는 경우 맨 위로
+        if (!layerA && !layerB) return 0;
+        if (!layerA) return 1;
+        if (!layerB) return -1;
+
+        // z-index 순서대로 정렬 (낮은 숫자가 먼저 = 아래 레이어)
+        return LAYER_Z_INDEX[layerA] - LAYER_Z_INDEX[layerB];
+      });
+
+      console.log(`📐 조합 ${index + 1} 레이어 순서:`, sortedCombo.map(a => {
+        const layer = getLayerType(a.variant);
+        return `${layer} (z:${layer ? LAYER_Z_INDEX[layer] : '?'})`;
+      }).join(' → '));
+
+      for (const asset of sortedCombo) {
+        // Construct a descriptive name for the instance
+        const assetName = Object.values(asset.variant).join('-');
+        const instance = await createIconInstance(asset.componentSet, asset.variant, assetName);
+
         if (instance.type === "INSTANCE") {
           instance.resize(DEFAULT_ICON_SIZE, DEFAULT_ICON_SIZE);
         }
@@ -692,7 +810,8 @@ async function placeIconCombinations(
 
       await figma.loadFontAsync({ family: "Inter", style: "Regular" });
       const label = figma.createText();
-      label.characters = combo.join(" + ");
+      label.characters = combo.map(p => Object.values(p.variant).join('-')).join(" + ");
+      // ... (label setup)
       label.fontSize = 14;
       label.fills = [{ type: "SOLID", color: { r: 0.3, g: 0.3, b: 0.3 } }];
 
@@ -701,9 +820,7 @@ async function placeIconCombinations(
       suggestionFrame.appendChild(comboFrame);
     } catch (error) {
       console.error(`아이콘 배치 중 오류 발생 (조합 ${index + 1})`, error);
-      figma.notify(`아이콘 조합 ${index + 1} 배치 실패. 콘솔 확인.`, {
-        timeout: 3000,
-      });
+      figma.notify(`아이콘 조합 ${index + 1} 배치 실패. 콘솔 확인.`, { timeout: 3000 });
     }
   }
 

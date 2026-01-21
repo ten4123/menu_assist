@@ -6,9 +6,17 @@
   "capabilities": [],
   "enableProposedApi": false,
   "documentAccess": "dynamic-page",
-  "editorType": ["figma"],
+  "editorType": [
+    "figma"
+  ],
   "ui": "ui.html",
   "networkAccess": {
-    "allowedDomains": ["none"]
+    "allowedDomains": [
+      "https://*.google.com",
+      "https://docs.google.com",
+      "https://static.figma.com",
+      "https://*.googleusercontent.com",
+      "https://script.google.com"
+    ]
   }
 }
