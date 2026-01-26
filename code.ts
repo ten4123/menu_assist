@@ -680,8 +680,8 @@ figma.ui.onmessage = async (msg) => {
         throw new Error(debugMsg);
       }
 
-      // 기존 DB에 추가 (중복 체크 없이 추가 - 추후 개선 가능)
-      customDB.entries.push(...newEntries);
+      // Google Sheets가 Source of Truth: 기존 데이터를 날리고 덮어씌움 (중복 방지)
+      customDB.entries = newEntries;
       addedCount = newEntries.length;
 
       saveCustomIconData(customDB);
@@ -692,7 +692,12 @@ figma.ui.onmessage = async (msg) => {
       }
     } catch (error) {
       const errorMsg = error instanceof Error ? error.message : "동기화 중 오류 발생";
-      figma.notify(`❌ 동기화 실패: ${errorMsg}`, { error: true });
+      console.error("Sync Error:", errorMsg); // 콘솔에는 항상 기록
+
+      // silent 모드가 아닐 때만 사용자에게 알림 (초기 실행 시 알림 억제)
+      if (!msg.silent) {
+        figma.notify(`❌ 동기화 실패: ${errorMsg}`, { error: true });
+      }
     }
   }
 };

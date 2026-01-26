@@ -26,6 +26,8 @@ The logic has been refactored to prioritize the **sequence of input keywords**, 
     - **Diversity Enforced**: naturally by the keyword stacking nature.
 
 ## Previous Initiatives
+- **v5.1 Hotfix**: Resolved critical 'Input Focus' bug by enforcing delayed focus and removing all intrusive `alert()` modals. Fixed 'Duplicate Data Sync' issue by replacing data instead of appending.
+- **v5 Manual Sync**: Added "Sync Now" button in Management tab. Features include real-time status indicators (Loading/Success/Fail), last sync timestamp, and total asset count display for better UX and reliability.
 - **v3 GAS Sync**: Implemented Bi-directional sync with Google Sheets (currently active).
 - **v2 Layer Logic**: Tried to fill slots (bg, metaphor) regardless of keyword source. (Abandoned in favor of v4 Stacking).
 
