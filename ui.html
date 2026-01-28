@@ -723,28 +723,7 @@
 
     // Legacy Code Cleanup (Removed unused event listeners for removed elements)
 
-    // CSV 라인 파서 (이젠 사용 안하지만 하위 호환을 위해 남겨두거나 삭제 가능. 삭제함)
 
-    // CSV 라인 파서 (따옴표 포함 처리)
-    function parseCSVLine(text) {
-      const result = [];
-      let curValue = '';
-      let inQuote = false;
-
-      for (let i = 0; i < text.length; i++) {
-        const char = text[i];
-        if (char === '"') {
-          inQuote = !inQuote;
-        } else if (char === ',' && !inQuote) {
-          result.push(curValue);
-          curValue = '';
-        } else {
-          curValue += char;
-        }
-      }
-      result.push(curValue);
-      return result;
-    }
 
     // 통합 메시지 핸들러
     onmessage = (event) => {

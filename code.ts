@@ -444,9 +444,7 @@ function findMatchCandidates(menuName: string): MatchCandidate[] {
   return candidates.sort((a, b) => b.score - a.score);
 }
 
-// getKeywordPosition and buildKeywordAssetGroups have been removed.
 
-// computeAssetCombinations removed in favor of buildLayeredCombinations
 
 // 🆕 변경된 로직: 레이어 기반 조합 생성
 // -----------------------------------------------------------
