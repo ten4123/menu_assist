@@ -1,0 +1,22 @@
+{
+  "name": "menu_assist",
+  "id": "1569956365892990316",
+  "api": "1.0.0",
+  "main": "code.js",
+  "capabilities": [],
+  "enableProposedApi": false,
+  "documentAccess": "dynamic-page",
+  "editorType": [
+    "figma"
+  ],
+  "ui": "ui.html",
+  "networkAccess": {
+    "allowedDomains": [
+      "https://*.google.com",
+      "https://docs.google.com",
+      "https://static.figma.com",
+      "https://*.googleusercontent.com",
+      "https://script.google.com"
+    ]
+  }
+}
